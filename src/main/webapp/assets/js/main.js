@@ -1,95 +1,101 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // Lấy context path từ thẻ meta hoặc biến toàn cục
-    const contextPath = window.contextPath || '';
+document.addEventListener('DOMContentLoaded', function() {
+    var contextPath = window.contextPath || '';
 
     // ==================== SLIDER ====================
-    let slideIndex = 0;
-    const slides = document.querySelectorAll('.slide');
+    var slideIndex = 0;
+    var slides = document.querySelectorAll('.slide');
     if (slides.length) {
         slides[0].classList.add('active');
-        setInterval(() => {
-            slides.forEach(s => s.classList.remove('active'));
+        setInterval(function() {
+            slides.forEach(function(s) { s.classList.remove('active'); });
             slideIndex = (slideIndex + 1) % slides.length;
             slides[slideIndex].classList.add('active');
         }, 4000);
     }
 
-    const prevBtn = document.querySelector('.prev');
-    const nextBtn = document.querySelector('.next');
+    var prevBtn = document.querySelector('.prev');
+    var nextBtn = document.querySelector('.next');
     if (prevBtn) {
-        prevBtn.addEventListener('click', () => {
-            slides.forEach(s => s.classList.remove('active'));
+        prevBtn.addEventListener('click', function() {
+            slides.forEach(function(s) { s.classList.remove('active'); });
             slideIndex = (slideIndex - 1 + slides.length) % slides.length;
             slides[slideIndex].classList.add('active');
         });
     }
     if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-            slides.forEach(s => s.classList.remove('active'));
+        nextBtn.addEventListener('click', function() {
+            slides.forEach(function(s) { s.classList.remove('active'); });
             slideIndex = (slideIndex + 1) % slides.length;
             slides[slideIndex].classList.add('active');
         });
     }
 
-    // ==================== CHATBOT ====================
-    const chatIcon = document.getElementById('chatIcon');
-    const chatWindow = document.getElementById('chatWindow');
+    // ==================== CHATBOT (AI) ====================
+    var chatIcon = document.getElementById('chatIcon');
+    var chatWindow = document.getElementById('chatWindow');
     if (chatIcon) {
-        chatIcon.addEventListener('click', () => {
-            const isVisible = chatWindow.style.display === 'flex';
+        chatIcon.addEventListener('click', function() {
+            var isVisible = chatWindow.style.display === 'flex';
             chatWindow.style.display = isVisible ? 'none' : 'flex';
         });
     }
 
-    const sendBtn = document.getElementById('sendChat');
-    const chatInput = document.getElementById('chatInput');
-    const chatBody = document.getElementById('chatBody');
+    var sendBtn = document.getElementById('sendChat');
+    var chatInput = document.getElementById('chatInput');
+    var chatBody = document.getElementById('chatBody');
 
     function addBotMessage(text) {
-        const msgDiv = document.createElement('div');
-        msgDiv.innerHTML = `<strong>🤖 Bot:</strong> ${text}`;
+        var msgDiv = document.createElement('div');
+        msgDiv.innerHTML = '<strong>🤖 Bot:</strong> ' + text;
         msgDiv.style.marginBottom = '10px';
         chatBody.appendChild(msgDiv);
         chatBody.scrollTop = chatBody.scrollHeight;
     }
 
     function addUserMessage(text) {
-        const msgDiv = document.createElement('div');
-        msgDiv.innerHTML = `<strong>👤 Bạn:</strong> ${text}`;
+        var msgDiv = document.createElement('div');
+        msgDiv.innerHTML = '<strong>👤 Bạn:</strong> ' + text;
         msgDiv.style.marginBottom = '10px';
         chatBody.appendChild(msgDiv);
         chatBody.scrollTop = chatBody.scrollHeight;
     }
 
-    if (sendBtn) {
-        sendBtn.addEventListener('click', () => {
-            const msg = chatInput.value.trim();
-            if (msg === '') return;
-            addUserMessage(msg);
-            chatInput.value = '';
-            setTimeout(() => {
-                const lower = msg.toLowerCase();
-                if (lower.includes('menu') || lower.includes('món')) {
-                    addBotMessage(`Mời bạn xem menu: <a href="${contextPath}/menu" style="color:#ff5722;">Tại đây</a>`);
-                } else if (lower.includes('giá')) {
-                    addBotMessage('Giá từ 25.000đ - 55.000đ. Bạn muốn gọi món gì?');
-                } else if (lower.includes('cảm ơn')) {
-                    addBotMessage('Rất hân hạnh! ☕');
-                } else {
-                    addBotMessage('Cảm ơn bạn! Chúng tôi sẽ hỗ trợ bạn sớm nhất.');
-                }
-            }, 500);
-        });
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendBtn.click();
+    function sendToAI(message) {
+        fetch(contextPath + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'message=' + encodeURIComponent(message)
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) addBotMessage(data.message);
+            else addBotMessage('Xin lỗi, tôi chưa hiểu. Vui lòng thử lại.');
+        })
+        .catch(function(error) {
+            addBotMessage('Lỗi kết nối đến máy chủ.');
         });
     }
 
-    // ==================== ANIMATION KHI THÊM GIỎ ====================
-    const addBtns = document.querySelectorAll('.btn-add-cart');
-    addBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const ripple = document.createElement('div');
+    if (sendBtn) {
+        sendBtn.addEventListener('click', function() {
+            var msg = chatInput.value.trim();
+            if (msg === '') return;
+            addUserMessage(msg);
+            chatInput.value = '';
+            sendToAI(msg);
+        });
+        if (chatInput) {
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') sendBtn.click();
+            });
+        }
+    }
+
+    // ==================== ANIMATION THÊM GIỎ ====================
+    var addBtns = document.querySelectorAll('.btn-add-cart');
+    addBtns.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            var ripple = document.createElement('div');
             ripple.textContent = '➕';
             ripple.style.position = 'fixed';
             ripple.style.left = e.clientX + 'px';
@@ -100,17 +106,17 @@ document.addEventListener('DOMContentLoaded', () => {
             ripple.style.transition = 'all 0.6s ease';
             ripple.style.opacity = '1';
             document.body.appendChild(ripple);
-            setTimeout(() => {
+            setTimeout(function() {
                 ripple.style.transform = 'translate(30px, -80px)';
                 ripple.style.opacity = '0';
             }, 10);
-            setTimeout(() => ripple.remove(), 700);
+            setTimeout(function() { ripple.remove(); }, 700);
         });
     });
 
     // ==================== SCROLL REVEAL ====================
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
             if (entry.isIntersecting) {
                 entry.target.style.opacity = '1';
                 entry.target.style.transform = 'translateY(0)';
@@ -118,10 +124,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }, { threshold: 0.1 });
-    document.querySelectorAll('.product-card, .widget, .cart-container, .product-detail').forEach(el => {
+    document.querySelectorAll('.product-card, .widget, .cart-container, .product-detail').forEach(function(el) {
         el.style.opacity = '0';
         el.style.transform = 'translateY(20px)';
         el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
         observer.observe(el);
     });
+
+    // ==================== THEME TOGGLE (Light/Dark) ====================
+    var themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        var currentTheme = localStorage.getItem('theme') || 'dark';
+        if (currentTheme === 'light') document.documentElement.classList.add('light');
+        themeToggle.textContent = currentTheme === 'light' ? '🌙' : '☀️';
+        themeToggle.addEventListener('click', function() {
+            var isLight = document.documentElement.classList.toggle('light');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            themeToggle.textContent = isLight ? '🌙' : '☀️';
+        });
+    }
 });

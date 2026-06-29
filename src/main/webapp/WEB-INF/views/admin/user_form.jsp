@@ -1,29 +1,51 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8"
-    pageEncoding="UTF-8"%>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Insert title here</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${user == null ? "Thêm nhân viên" : "Sửa nhân viên"} - Chidori Coffee</title>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <style>
+        .form-container { max-width: 500px; margin: 2rem auto; }
+        .form-container select { width: 100%; padding: 0.8rem; background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 12px; color: white; }
+    </style>
 </head>
 <body>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<form method="post">
-    <input type="hidden" name="action" value="${user == null ? 'create' : 'update'}">
-    <c:if test="${user != null}">
-        <input type="hidden" name="id" value="${user.id}">
-    </c:if>
-    <label>Username:</label><input name="username" value="${user.username}" ${user != null ? 'readonly' : ''}><br>
-    <label>Password:</label><input type="password" name="password" placeholder="${user != null ? 'để trống nếu không đổi' : 'bắt buộc'}"><br>
-    <label>Fullname:</label><input name="fullname" value="${user.fullname}"><br>
-    <label>Email:</label><input name="email" value="${user.email}"><br>
-    <label>Role:</label>
-    <select name="role">
-        <option value="admin" ${user.role == 'admin' ? 'selected' : ''}>Admin</option>
-        <option value="manager" ${user.role == 'manager' ? 'selected' : ''}>Manager</option>
-        <option value="staff" ${user.role == 'staff' ? 'selected' : ''}>Staff</option>
-    </select><br>
-    <button type="submit">Lưu</button>
-</form>
+<%@ include file="/WEB-INF/views/header.jsp" %>
+<div class="form-container">
+    <h2>${user == null ? "➕ Thêm nhân viên mới" : "✏️ Cập nhật nhân viên"}</h2>
+    <form method="post">
+        <input type="hidden" name="action" value="${user == null ? 'create' : 'update'}">
+        <c:if test="${user != null}">
+            <input type="hidden" name="id" value="${user.id}">
+        </c:if>
+
+        <label>Username:</label>
+        <input type="text" name="username" value="${user.username}" ${user != null ? 'readonly' : ''} required>
+
+        <label>Password:</label>
+        <input type="password" name="password" placeholder="${user != null ? 'Để trống nếu không đổi' : 'Bắt buộc'}">
+
+        <label>Họ tên:</label>
+        <input type="text" name="fullname" value="${user.fullname}" required>
+
+        <label>Email:</label>
+        <input type="email" name="email" value="${user.email}" required>
+
+        <label>Vai trò:</label>
+        <select name="role" required>
+            <option value="admin" ${user.role == 'admin' ? 'selected' : ''}>Admin</option>
+            <option value="manager" ${user.role == 'manager' ? 'selected' : ''}>Manager</option>
+            <option value="staff" ${user.role == 'staff' ? 'selected' : ''}>Staff</option>
+            <option value="customer" ${user.role == 'customer' ? 'selected' : ''}>Customer</option>
+        </select>
+
+        <button type="submit" class="btn-primary">💾 Lưu</button>
+        <a href="${pageContext.request.contextPath}/admin/users" class="btn">⬅️ Quay lại</a>
+    </form>
+</div>
+<%@ include file="/WEB-INF/views/footer.jsp" %>
 </body>
 </html>

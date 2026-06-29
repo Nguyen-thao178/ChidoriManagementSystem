@@ -1,4 +1,4 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <script>window.contextPath = "${pageContext.request.contextPath}";</script>
 <header>
@@ -11,15 +11,20 @@
             <button type="submit">🔍</button>
         </form>
         <div class="user-actions">
+            <button id="themeToggle" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">🌙</button>
             <c:if test="${not empty sessionScope.user}">
                 <span>🧑‍💼 ${sessionScope.user.fullname} (${sessionScope.user.role})</span>
+                <!-- ⭐ Lịch sử đơn hàng cho TẤT CẢ user (kể cả staff) -->
+                <a href="${pageContext.request.contextPath}/history">📜 Lịch sử</a>
+                <!-- ⭐ Điểm thưởng cho tất cả -->
+                <a href="${pageContext.request.contextPath}/loyalty">🎖️ Điểm thưởng</a>
+                <!-- Đổi mật khẩu cho tất cả -->
+                <a href="${pageContext.request.contextPath}/change-password">🔑 Đổi mật khẩu</a>
                 <a href="${pageContext.request.contextPath}/cart">🛒 Giỏ 
                     <c:if test="${not empty sessionScope.cart}">
                         (${sessionScope.cart.size()})
                     </c:if>
                 </a>
-                <a href="${pageContext.request.contextPath}/history">📜 Lịch sử</a>
-                <a href="${pageContext.request.contextPath}/loyalty">🎖️ Điểm thưởng</a>
                 <a href="${pageContext.request.contextPath}/logout">🚪 Đăng xuất</a>
             </c:if>
         </div>
@@ -29,6 +34,7 @@
         <a href="${pageContext.request.contextPath}/menu">📋 Menu</a>
         <a href="${pageContext.request.contextPath}/promotion">🎁 Khuyến mãi</a>
         <a href="${pageContext.request.contextPath}/contact">📞 Liên hệ</a>
+        <!-- Chỉ admin mới thấy các link quản trị -->
         <c:if test="${sessionScope.user.role == 'admin'}">
             <a href="${pageContext.request.contextPath}/admin/users">👥 Quản lý nhân viên</a>
             <a href="${pageContext.request.contextPath}/admin/products">📦 Quản lý menu</a>
@@ -36,6 +42,7 @@
             <a href="${pageContext.request.contextPath}/admin/settings">⚙️ Cài đặt</a>
             <a href="${pageContext.request.contextPath}/register-member">➕ Đăng ký thành viên</a>
         </c:if>
+        <!-- Chỉ manager/admin mới thấy báo cáo -->
         <c:if test="${sessionScope.user.role == 'manager'}">
             <a href="${pageContext.request.contextPath}/admin/report">📊 Báo cáo</a>
         </c:if>
@@ -52,6 +59,7 @@
             <c:when test="${uri.contains('/contact')}">Liên hệ</c:when>
             <c:when test="${uri.contains('/loyalty')}">Điểm thưởng</c:when>
             <c:when test="${uri.contains('/admin')}">Quản trị</c:when>
+            <c:when test="${uri.contains('/change-password')}">Đổi mật khẩu</c:when>
             <c:otherwise>Trang hiện tại</c:otherwise>
         </c:choose>
     </div>

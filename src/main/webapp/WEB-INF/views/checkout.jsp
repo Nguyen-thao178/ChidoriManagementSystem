@@ -18,7 +18,7 @@
     </c:if>
     <c:if test="${not empty sessionScope.cart}">
         <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
-            <!-- Bên trái: thông tin khách hàng và chi tiết đơn hàng -->
+            <!-- Thông tin đơn hàng -->
             <div style="flex: 1;">
                 <h3>Thông tin khách hàng</h3>
                 <p>Họ tên: ${sessionScope.user.fullname}</p>
@@ -37,7 +37,7 @@
                                 <td>${item.quantity}</td>
                                 <td><fmt:formatNumber value="${item.discountedPrice}" type="number"/>₫</td>
                                 <td><fmt:formatNumber value="${item.discountedPrice * item.quantity}" type="number"/>₫</td>
-                            </tr>
+                            </table>
                             <c:set var="total" value="${total + item.discountedPrice * item.quantity}" />
                         </c:forEach>
                     </tbody>
@@ -50,14 +50,15 @@
                 </table>
             </div>
 
-            <!-- Bên phải: QR và nút xác nhận -->
+            <!-- Hình thức thanh toán -->
             <div style="flex: 0 0 320px; text-align: center; background: var(--card-bg); padding: 1.5rem; border-radius: 20px;">
-                <h3>📱 Quét mã QR để thanh toán</h3>
+                <h3>📱 Quét mã QR để chuyển khoản</h3>
                 <img src="${pageContext.request.contextPath}/assets/images/qr.png"
                      alt="QR Code"
                      style="width: 200px; margin: 1rem auto; display: block; border-radius: 12px;">
                 <p><small>Chuyển khoản theo số tiền <strong><fmt:formatNumber value="${total}" type="number"/>₫</strong></small></p>
-                <button id="confirmPaymentBtn" class="btn-primary" style="width: 100%; margin-top: 1rem;">✅ Xác nhận đã thanh toán</button>
+                <button id="confirmPaymentBtn" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">✅ Xác nhận đã thanh toán</button>
+                <button id="vnpayBtn" class="btn-primary" style="width: 100%; margin-top: 0.5rem; background: #0056b3;">💳 Thanh toán VNPay</button>
                 <div id="paymentMessage" style="margin-top: 1rem; font-size: 0.9rem;"></div>
             </div>
         </div>
@@ -94,6 +95,10 @@
             btn.disabled = false;
             btn.textContent = '✅ Xác nhận đã thanh toán';
         });
+    });
+
+    document.getElementById('vnpayBtn')?.addEventListener('click', function() {
+        window.location.href = '${pageContext.request.contextPath}/vnpay-pay';
     });
 </script>
 <%@ include file="footer.jsp" %>

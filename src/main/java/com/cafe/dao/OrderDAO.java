@@ -59,6 +59,10 @@ public class OrderDAO {
             psUpdateProduct.executeBatch();
 
             conn.commit();
+         // After conn.commit() and before return orderId
+            LoyaltyDAO loyaltyDAO = new LoyaltyDAO();
+            int pointsEarned = (int) (total / 1000);
+            loyaltyDAO.addPoints(userId, pointsEarned, total);
             return orderId;
         } catch (SQLException e) {
             if (conn != null) conn.rollback();

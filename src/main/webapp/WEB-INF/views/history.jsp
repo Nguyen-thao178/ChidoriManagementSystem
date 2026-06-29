@@ -11,7 +11,6 @@
 </head>
 <body>
 <%@ include file="header.jsp" %>
-<div class="history-container">
     <h2>📜 Lịch sử đơn hàng</h2>
     <c:choose>
         <c:when test="${empty orderList}">
