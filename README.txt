@@ -642,8 +642,8 @@ khổ môn học PRO230 — Dự án tốt nghiệp.
 
 -   Hotline mẫu trong hệ thống: 1900 1234 (system_settings)
 
--   Email hỗ trợ mẫu: support@chidori.com / admin@chidori.com
+-   Email hỗ trợ mẫu: kietpmts02684@gmail.com
 
--   Email liên hệ nhóm: (bổ sung email thật của nhóm)
+-   Email liên hệ nhóm: nguyendhtts02518@gmail.com
 
--   GitHub: (bổ sung link repository thật của nhóm)
+-   GitHub: https://github.com/Nguyen-thao178/ChidoriManagementSystem/edit/main/
