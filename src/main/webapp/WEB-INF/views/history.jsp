@@ -6,34 +6,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lịch sử đơn hàng - Chidori Coffee</title>
+    <title>Lịch sử giao dịch - Chidori Coffee</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
 </head>
 <body>
 <%@ include file="header.jsp" %>
-    <h2>📜 Lịch sử đơn hàng</h2>
+<main class="history-container">
+    <div class="page-heading">
+        <div>
+            <h2>📜 Lịch sử giao dịch</h2>
+            <p>Theo dõi thanh toán trực tiếp và toàn bộ vòng đời đơn đặt cọc.</p>
+        </div>
+        <div>
+            <a href="${pageContext.request.contextPath}/deposit-orders" class="btn">📅 Đơn Hàng Cọc</a>
+            <a href="${pageContext.request.contextPath}/export-history" class="btn-primary">📄 Xuất PDF</a>
+        </div>
+    </div>
+
     <c:choose>
         <c:when test="${empty orderList}">
-            <p>Bạn chưa có đơn hàng nào.</p>
+            <p>Bạn chưa có giao dịch nào.</p>
         </c:when>
         <c:otherwise>
-        	<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-			    <h2>📜 Lịch sử đơn hàng</h2>
-			    <a href="${pageContext.request.contextPath}/export-history" class="btn-primary" style="background: #4caf50;">📄 Xuất PDF</a>
-			</div>
-            <table class="cart-table">
-                <tr><th>Mã đơn</th><th>Ngày đặt</th><th>Tổng tiền</th><th>Trạng thái</th></tr>
-                <c:forEach var="order" items="${orderList}">
-                    <tr><td>#${order.id}</td>
-                        <td><fmt:formatDate value="${order.orderDate}" pattern="dd/MM/yyyy HH:mm"/></td>
-                        <td><fmt:formatNumber value="${order.totalAmount}" type="number"/>₫</td>
-                        <td>${order.status}</td>
+            <div class="table-scroll">
+                <table class="cart-table">
+                    <thead>
+                    <tr>
+                        <th>Mã đơn</th>
+                        <th>Ngày đặt</th>
+                        <th>Ngày nhận</th>
+                        <th>Tổng tiền</th>
+                        <th>Đã cọc</th>
+                        <th>Thanh toán</th>
+                        <th>Loại giao dịch</th>
                     </tr>
-                </c:forEach>
-            </table>
+                    </thead>
+                    <tbody>
+                    <c:forEach var="order" items="${orderList}">
+                        <tr>
+                            <td>#${order.id}</td>
+                            <td><fmt:formatDate value="${order.orderDate}" pattern="dd/MM/yyyy HH:mm"/></td>
+                            <td>
+                                <c:choose>
+                                    <c:when test="${not empty order.pickupDate}">
+                                        <fmt:formatDate value="${order.pickupDate}" pattern="dd/MM/yyyy"/>
+                                    </c:when>
+                                    <c:otherwise>—</c:otherwise>
+                                </c:choose>
+                            </td>
+                            <td><fmt:formatNumber value="${order.totalAmount}" type="number"/>₫</td>
+                            <td>
+                                <c:choose>
+                                    <c:when test="${order.orderType == 'deposit'}">
+                                        <fmt:formatNumber value="${order.depositAmount}" type="number"/>₫
+                                    </c:when>
+                                    <c:otherwise>—</c:otherwise>
+                                </c:choose>
+                            </td>
+                            <td>${order.paymentMethod == 'vnpay' ? 'VNPay' : 'Tiền mặt'}</td>
+                            <td>
+                                <c:choose>
+                                    <c:when test="${order.transactionTag == 'Thanh toán trực tiếp'}">
+                                        <span class="order-tag tag-direct">Thanh toán trực tiếp</span>
+                                    </c:when>
+                                    <c:when test="${order.transactionTag == 'Đã cọc nhưng không nhận hàng'}">
+                                        <span class="order-tag tag-no-show">Đã cọc nhưng không nhận hàng</span>
+                                    </c:when>
+                                    <c:when test="${order.transactionTag == 'Đã cọc và đã nhận hàng'}">
+                                        <span class="order-tag tag-picked-up">Đã cọc và đã nhận hàng</span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="order-tag tag-deposit-pending">Đã cọc - Chờ nhận hàng</span>
+                                    </c:otherwise>
+                                </c:choose>
+                            </td>
+                        </tr>
+                    </c:forEach>
+                    </tbody>
+                </table>
+            </div>
         </c:otherwise>
     </c:choose>
-</div>
+</main>
 <%@ include file="footer.jsp" %>
 </body>
 </html>

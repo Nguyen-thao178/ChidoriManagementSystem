@@ -102,7 +102,7 @@ public class ExportHistoryServlet extends HttpServlet {
                 addCell(table, String.valueOf(o.getId()), normalFont);
                 addCell(table, sdf.format(o.getOrderDate()), normalFont);
                 addCell(table, String.format("%,.0f", o.getTotalAmount()), normalFont);
-                addCell(table, o.getStatus(), normalFont);
+                addCell(table, o.getTransactionTag(), normalFont);
             }
             document.add(table);
 

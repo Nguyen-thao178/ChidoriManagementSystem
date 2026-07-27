@@ -21,6 +21,7 @@
                 <th>ID</th>
                 <th>Hình ảnh</th>
                 <th>Tên sản phẩm</th>
+                <th>Mã vạch</th>
                 <th>Danh mục</th>
                 <th>Giá (VNĐ)</th>
                 <th>Tồn kho</th>
@@ -34,6 +35,7 @@
                     <td>${p.id}</td>
                     <td><img src="${p.imageUrl}" style="width: 50px; height: 50px; object-fit: cover;"></td>
                     <td>${p.name}</td>
+                    <td><code>${empty p.barcode ? '—' : p.barcode}</code></td>
                     <td>${p.category}</td>
                     <td><fmt:formatNumber value="${p.price}" type="number"/>₫</td>
                     <td>${p.stock}</td>

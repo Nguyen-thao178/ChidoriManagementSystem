@@ -13,6 +13,29 @@
 <%@ include file="header.jsp" %>
 <div class="cart-container">
     <h2>🛒 Giỏ hàng của bạn</h2>
+    <nav class="cart-tabs" aria-label="Giỏ hàng và đơn đã cọc">
+        <a href="${pageContext.request.contextPath}/cart" class="cart-tab active">Giỏ hàng</a>
+        <a href="${pageContext.request.contextPath}/deposit-orders" class="cart-tab">
+            Đã Cọc
+            <c:if test="${pendingDepositCount > 0}">
+                <span class="tab-count">${pendingDepositCount}</span>
+            </c:if>
+        </a>
+    </nav>
+    <section class="barcode-panel" aria-labelledby="barcode-title">
+        <div>
+            <h3 id="barcode-title">Quét mã vạch</h3>
+            <p>Giữ con trỏ trong ô bên dưới, sau đó quét bằng máy đọc mã vạch. Mỗi lần quét sẽ thêm một sản phẩm.</p>
+        </div>
+        <form id="barcodeForm" action="${pageContext.request.contextPath}/cart/scan" method="post">
+            <label for="barcodeInput" class="sr-only">Mã vạch sản phẩm</label>
+            <input type="text" id="barcodeInput" name="barcode" maxlength="16" inputmode="numeric"
+                   autocomplete="off" autocapitalize="off" spellcheck="false"
+                   placeholder="Quét barcode EAN-13 rồi nhấn Enter" autofocus required>
+            <button type="submit" class="btn-primary">Quét / Thêm</button>
+        </form>
+        <div id="scanStatus" class="scan-status" role="status" aria-live="polite"></div>
+    </section>
     <c:choose>
         <c:when test="${empty sessionScope.cart or sessionScope.cart.size() == 0}">
             <p>Giỏ hàng trống. <a href="${pageContext.request.contextPath}/menu">Mua sắm ngay</a></p>
@@ -48,5 +71,62 @@
     </c:choose>
 </div>
 <%@ include file="footer.jsp" %>
+<script>
+    (() => {
+        const form = document.getElementById('barcodeForm');
+        const input = document.getElementById('barcodeInput');
+        const status = document.getElementById('scanStatus');
+        let submitting = false;
+
+        const focusScanner = () => {
+            if (!submitting) {
+                input.focus();
+                input.select();
+            }
+        };
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const barcode = input.value.trim();
+            if (!barcode || submitting) return;
+
+            submitting = true;
+            status.className = 'scan-status';
+            status.textContent = 'Đang đọc mã ' + barcode + '…';
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+                    body: new URLSearchParams({barcode})
+                });
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    return;
+                }
+                const result = await response.json();
+                status.className = 'scan-status ' + (result.success ? 'scan-success' : 'scan-error');
+                status.textContent = result.message;
+
+                if (result.success) {
+                    window.setTimeout(() => window.location.reload(), 250);
+                    return;
+                }
+            } catch (error) {
+                status.className = 'scan-status scan-error';
+                status.textContent = 'Không thể xử lý mã vạch. Vui lòng thử lại.';
+            }
+
+            input.value = '';
+            submitting = false;
+            focusScanner();
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('input, textarea, select, button, a')) focusScanner();
+        });
+        window.addEventListener('pageshow', focusScanner);
+    })();
+</script>
 </body>
 </html>

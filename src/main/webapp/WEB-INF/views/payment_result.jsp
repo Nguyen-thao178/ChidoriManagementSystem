@@ -13,8 +13,16 @@
     <c:choose>
         <c:when test="${paymentStatus == 'success'}">
             <h2>✅ Thanh toán thành công!</h2>
-            <p>Cảm ơn bạn đã mua hàng. Đơn hàng đã được ghi nhận.</p>
-            <a href="${pageContext.request.contextPath}/history" class="btn-primary">Xem lịch sử</a>
+            <c:choose>
+                <c:when test="${depositOrder}">
+                    <p>Tiền cọc đã được ghi nhận và hàng đã được giữ đến ngày nhận.</p>
+                    <a href="${pageContext.request.contextPath}/deposit-orders" class="btn-primary">Xem Đơn Hàng Cọc</a>
+                </c:when>
+                <c:otherwise>
+                    <p>Cảm ơn bạn đã mua hàng. Đơn hàng đã được ghi nhận.</p>
+                    <a href="${pageContext.request.contextPath}/history" class="btn-primary">Xem lịch sử</a>
+                </c:otherwise>
+            </c:choose>
         </c:when>
         <c:when test="${paymentStatus == 'failed'}">
             <h2>❌ Thanh toán thất bại</h2>

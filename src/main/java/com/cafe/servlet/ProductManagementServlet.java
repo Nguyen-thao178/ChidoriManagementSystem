@@ -3,6 +3,7 @@ package com.cafe.servlet;
 import com.cafe.dao.ProductDAO;
 import com.cafe.model.Product;
 import com.cafe.model.User;
+import com.cafe.utils.BarcodeUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
@@ -11,7 +12,7 @@ import java.util.List;
 
 @WebServlet("/admin/products")
 public class ProductManagementServlet extends HttpServlet {
-    private ProductDAO productDAO = new ProductDAO();
+    private final ProductDAO productDAO = new ProductDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -35,7 +36,7 @@ public class ProductManagementServlet extends HttpServlet {
     }
 
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
         if (!isAdmin(req)) {
             resp.sendRedirect(req.getContextPath() + "/home");
             return;
@@ -53,15 +54,38 @@ public class ProductManagementServlet extends HttpServlet {
             int soldCount = Integer.parseInt(req.getParameter("soldCount"));
             String imageUrl = req.getParameter("imageUrl");
             String category = req.getParameter("category");
+            String barcode = BarcodeUtil.normalize(req.getParameter("barcode"));
 
-            Product p = new Product(id, name, price, description, stock, soldCount, imageUrl, category);
+            Product p = new Product(id, name, price, description, stock, soldCount, imageUrl, category, barcode);
+            if (barcode != null && !BarcodeUtil.isValidEan13(barcode)) {
+                showProductForm(req, resp, p,
+                        "Barcode EAN-13 phải có đúng 13 chữ số và check digit hợp lệ.");
+                return;
+            }
+            if (productDAO.barcodeExists(barcode, id)) {
+                showProductForm(req, resp, p, "Mã vạch này đã được đăng ký cho một sản phẩm khác.");
+                return;
+            }
+
+            boolean saved;
             if (id == 0) {
-                productDAO.addProduct(p);
+                saved = productDAO.addProduct(p);
             } else {
-                productDAO.updateProduct(p);
+                saved = productDAO.updateProduct(p);
+            }
+            if (!saved) {
+                showProductForm(req, resp, p, "Không thể lưu sản phẩm. Vui lòng kiểm tra kết nối cơ sở dữ liệu.");
+                return;
             }
         }
         resp.sendRedirect(req.getContextPath() + "/admin/products");
+    }
+
+    private void showProductForm(HttpServletRequest req, HttpServletResponse resp, Product product, String error)
+            throws ServletException, IOException {
+        req.setAttribute("product", product);
+        req.setAttribute("error", error);
+        req.getRequestDispatcher("/WEB-INF/views/admin/product_form.jsp").forward(req, resp);
     }
 
     private boolean isAdmin(HttpServletRequest req) {

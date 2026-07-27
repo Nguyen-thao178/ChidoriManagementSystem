@@ -8,10 +8,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.sql.Date;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 @WebServlet("/checkout")
 public class CheckoutServlet extends HttpServlet {
@@ -21,12 +22,15 @@ public class CheckoutServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         // Hiển thị trang checkout với QR
+        req.setAttribute("minPickupDate", LocalDate.now().plusDays(1).toString());
+        req.setAttribute("depositPercent", (int) (OrderDAO.DEFAULT_DEPOSIT_RATE * 100));
         req.getRequestDispatcher("/WEB-INF/views/checkout.jsp").forward(req, resp);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws IOException {
+        req.setCharacterEncoding("UTF-8");
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         Map<String, Object> result = new HashMap<>();
@@ -48,26 +52,71 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        // Giả lập thanh toán: 80% thành công, 20% thất bại
-        boolean paymentSuccess = new Random().nextInt(100) < 80;
+        String orderType = req.getParameter("orderType");
+        String paymentMethod = req.getParameter("paymentMethod");
+        if (!"direct".equals(orderType) && !"deposit".equals(orderType)) {
+            result.put("success", false);
+            result.put("message", "Hình thức giao dịch không hợp lệ.");
+            writeJson(resp, result);
+            return;
+        }
+        if (!"cash".equals(paymentMethod) && !"vnpay".equals(paymentMethod)) {
+            result.put("success", false);
+            result.put("message", "Phương thức thanh toán không hợp lệ.");
+            writeJson(resp, result);
+            return;
+        }
 
-        if (paymentSuccess) {
-            double total = cart.stream()
-                    .mapToDouble(item -> item.getDiscountedPrice() * item.getQuantity())
-                    .sum();
+        Date pickupDate = null;
+        if ("deposit".equals(orderType)) {
             try {
-                orderDAO.createOrder(user.getId(), cart, total);
-                session.removeAttribute("cart"); // Xóa giỏ sau khi thành công
-                result.put("success", true);
-                result.put("message", "Thanh toán thành công! Đơn hàng đã được lưu.");
+                LocalDate parsedDate = LocalDate.parse(req.getParameter("pickupDate"));
+                if (!parsedDate.isAfter(LocalDate.now())) {
+                    throw new IllegalArgumentException();
+                }
+                pickupDate = Date.valueOf(parsedDate);
             } catch (Exception e) {
                 result.put("success", false);
-                result.put("message", "Lỗi lưu đơn hàng: " + e.getMessage());
+                result.put("message", "Ngày nhận hàng phải từ ngày mai trở đi.");
+                writeJson(resp, result);
+                return;
             }
-        } else {
-            // Thanh toán thất bại, giữ nguyên giỏ hàng
+        }
+
+        double total = cart.stream()
+                .mapToDouble(item -> item.getDiscountedPrice() * item.getQuantity())
+                .sum();
+        double payableAmount = "deposit".equals(orderType)
+                ? Math.round(total * OrderDAO.DEFAULT_DEPOSIT_RATE)
+                : total;
+
+        if ("vnpay".equals(paymentMethod)) {
+            session.setAttribute("checkoutOrderType", orderType);
+            session.setAttribute("checkoutPickupDate", pickupDate);
+            session.setAttribute("checkoutPayableAmount", payableAmount);
+            result.put("success", true);
+            result.put("redirectUrl", req.getContextPath() + "/vnpay-pay");
+            result.put("message", "Đang chuyển đến VNPay.");
+            writeJson(resp, result);
+            return;
+        }
+
+        try {
+            int orderId = orderDAO.createOrder(
+                    user.getId(), cart, total, orderType, paymentMethod, pickupDate, payableAmount
+            );
+            session.removeAttribute("cart");
+            result.put("success", true);
+            result.put("orderId", orderId);
+            result.put("redirectUrl", "deposit".equals(orderType)
+                    ? req.getContextPath() + "/deposit-orders"
+                    : req.getContextPath() + "/history");
+            result.put("message", "deposit".equals(orderType)
+                    ? "Đã tạo đơn cọc và giữ hàng thành công."
+                    : "Thanh toán trực tiếp thành công.");
+        } catch (Exception e) {
             result.put("success", false);
-            result.put("message", "Thanh toán thất bại. Vui lòng thử lại.");
+            result.put("message", "Không thể tạo đơn hàng: " + e.getMessage());
         }
         writeJson(resp, result);
     }

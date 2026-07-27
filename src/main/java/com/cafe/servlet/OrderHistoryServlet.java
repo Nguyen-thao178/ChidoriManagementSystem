@@ -25,6 +25,11 @@ public class OrderHistoryServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
+        try {
+            orderDAO.expireOverdueDeposits();
+        } catch (Exception e) {
+            getServletContext().log("Không thể cập nhật đơn cọc quá hạn", e);
+        }
         List<Order> orders = orderDAO.getOrdersByUserId(user.getId());
         req.setAttribute("orderList", orders);
         req.getRequestDispatcher("/WEB-INF/views/history.jsp").forward(req, resp);

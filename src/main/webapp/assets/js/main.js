@@ -33,62 +33,109 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==================== CHATBOT (AI) ====================
     var chatIcon = document.getElementById('chatIcon');
     var chatWindow = document.getElementById('chatWindow');
-    if (chatIcon) {
-        chatIcon.addEventListener('click', function() {
-            var isVisible = chatWindow.style.display === 'flex';
-            chatWindow.style.display = isVisible ? 'none' : 'flex';
-        });
-    }
-
+    var closeChat = document.getElementById('closeChat');
     var sendBtn = document.getElementById('sendChat');
     var chatInput = document.getElementById('chatInput');
     var chatBody = document.getElementById('chatBody');
+    var chatTyping = document.getElementById('chatTyping');
+    var sendingMessage = false;
 
-    function addBotMessage(text) {
+    function setChatOpen(open) {
+        if (!chatWindow || !chatIcon) return;
+        chatWindow.classList.toggle('is-open', open);
+        chatWindow.setAttribute('aria-hidden', String(!open));
+        chatIcon.setAttribute('aria-expanded', String(open));
+        chatIcon.setAttribute('aria-label', open ? 'Đóng trợ lý Chidori' : 'Mở trợ lý Chidori');
+        if (open && chatInput) {
+            window.setTimeout(function() { chatInput.focus(); }, 160);
+        }
+    }
+
+    if (chatIcon) {
+        chatIcon.addEventListener('click', function() {
+            setChatOpen(!chatWindow.classList.contains('is-open'));
+        });
+    }
+    if (closeChat) {
+        closeChat.addEventListener('click', function() { setChatOpen(false); });
+    }
+
+    function addMessage(text, isUser) {
         var msgDiv = document.createElement('div');
-        msgDiv.innerHTML = '<strong>🤖 Bot:</strong> ' + text;
-        msgDiv.style.marginBottom = '10px';
+        msgDiv.className = 'chat-message ' + (isUser ? 'user-message' : 'bot-message');
+
+        if (!isUser) {
+            var avatar = document.createElement('span');
+            avatar.className = 'message-avatar';
+            avatar.textContent = 'C';
+            msgDiv.appendChild(avatar);
+        }
+
+        var bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.textContent = text;
+        msgDiv.appendChild(bubble);
         chatBody.appendChild(msgDiv);
         chatBody.scrollTop = chatBody.scrollHeight;
     }
 
-    function addUserMessage(text) {
-        var msgDiv = document.createElement('div');
-        msgDiv.innerHTML = '<strong>👤 Bạn:</strong> ' + text;
-        msgDiv.style.marginBottom = '10px';
-        chatBody.appendChild(msgDiv);
-        chatBody.scrollTop = chatBody.scrollHeight;
+    function setSending(sending) {
+        sendingMessage = sending;
+        if (sendBtn) sendBtn.disabled = sending;
+        if (chatInput) chatInput.disabled = sending;
+        if (chatTyping) chatTyping.hidden = !sending;
+        if (sending && chatBody) chatBody.scrollTop = chatBody.scrollHeight;
     }
 
     function sendToAI(message) {
+        setSending(true);
         fetch(contextPath + '/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'message=' + encodeURIComponent(message)
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'Accept': 'application/json'
+            },
+            body: new URLSearchParams({message: message})
         })
-        .then(function(response) { return response.json(); })
+        .then(function(response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
+        })
         .then(function(data) {
-            if (data.success) addBotMessage(data.message);
-            else addBotMessage('Xin lỗi, tôi chưa hiểu. Vui lòng thử lại.');
+            addMessage(data.message || 'Mình chưa thể trả lời lúc này.', false);
         })
-        .catch(function(error) {
-            addBotMessage('Lỗi kết nối đến máy chủ.');
+        .catch(function() {
+            addMessage('Mình chưa kết nối được máy chủ. Bạn vui lòng thử lại sau nhé.', false);
+        })
+        .finally(function() {
+            setSending(false);
+            if (chatInput) chatInput.focus();
         });
     }
 
-    if (sendBtn) {
-        sendBtn.addEventListener('click', function() {
-            var msg = chatInput.value.trim();
-            if (msg === '') return;
-            addUserMessage(msg);
-            chatInput.value = '';
-            sendToAI(msg);
+    function submitChat(message) {
+        var msg = (message || (chatInput ? chatInput.value : '')).trim();
+        if (!msg || sendingMessage) return;
+        addMessage(msg, true);
+        chatInput.value = '';
+        document.querySelector('.chat-suggestions')?.remove();
+        sendToAI(msg);
+    }
+
+    if (sendBtn && chatInput && chatBody) {
+        sendBtn.addEventListener('click', function() { submitChat(); });
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitChat();
+            }
         });
-        if (chatInput) {
-            chatInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') sendBtn.click();
+        document.querySelectorAll('[data-chat-suggestion]').forEach(function(button) {
+            button.addEventListener('click', function() {
+                setChatOpen(true);
+                submitChat(button.dataset.chatSuggestion);
             });
-        }
+        });
     }
 
     // ==================== ANIMATION THÊM GIỎ ====================

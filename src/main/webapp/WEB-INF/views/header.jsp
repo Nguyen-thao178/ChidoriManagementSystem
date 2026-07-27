@@ -16,6 +16,7 @@
                 <span>🧑‍💼 ${sessionScope.user.fullname} (${sessionScope.user.role})</span>
                 <!-- ⭐ Lịch sử đơn hàng cho TẤT CẢ user (kể cả staff) -->
                 <a href="${pageContext.request.contextPath}/history">📜 Lịch sử</a>
+                <a href="${pageContext.request.contextPath}/deposit-orders">📅 Đơn Hàng Cọc</a>
                 <!-- ⭐ Điểm thưởng cho tất cả -->
                 <a href="${pageContext.request.contextPath}/loyalty">🎖️ Điểm thưởng</a>
                 <!-- Đổi mật khẩu cho tất cả -->
@@ -55,6 +56,7 @@
             <c:when test="${uri.contains('/cart')}">Giỏ hàng</c:when>
             <c:when test="${uri.contains('/checkout')}">Thanh toán</c:when>
             <c:when test="${uri.contains('/history')}">Lịch sử đơn</c:when>
+            <c:when test="${uri.contains('/deposit-orders')}">Đơn Hàng Cọc</c:when>
             <c:when test="${uri.contains('/promotion')}">Khuyến mãi</c:when>
             <c:when test="${uri.contains('/contact')}">Liên hệ</c:when>
             <c:when test="${uri.contains('/loyalty')}">Điểm thưởng</c:when>

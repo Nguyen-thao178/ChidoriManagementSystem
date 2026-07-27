@@ -36,10 +36,12 @@ public class LoyaltyDAO {
     }
 
     public boolean createEmpty(int userId) {
-        String sql = "INSERT INTO loyalty_points (user_id, points, total_spent) VALUES (?, 0, 0)";
+        String sql = "IF NOT EXISTS (SELECT 1 FROM loyalty_points WHERE user_id = ?) " +
+                "INSERT INTO loyalty_points (user_id, points, total_spent) VALUES (?, 0, 0)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, userId);
+            ps.setInt(2, userId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) { e.printStackTrace(); }
         return false;

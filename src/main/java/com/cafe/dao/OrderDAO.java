@@ -7,8 +7,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class OrderDAO {
+    public static final double DEFAULT_DEPOSIT_RATE = 0.30;
 
     public int createOrder(int userId, List<CartItem> cart, double total) throws SQLException {
+        return createOrder(userId, cart, total, "direct", "cash", null, total);
+    }
+
+    public int createOrder(int userId, List<CartItem> cart, double total, String orderType,
+                           String paymentMethod, java.sql.Date pickupDate, double paidAmount)
+            throws SQLException {
         Connection conn = null;
         PreparedStatement psOrder = null;
         PreparedStatement psDetail = null;
@@ -27,10 +34,27 @@ public class OrderDAO {
                 }
             }
 
-            String sqlOrder = "INSERT INTO orders (user_id, total_amount, status) VALUES (?, ?, 'completed')";
+            boolean deposit = "deposit".equals(orderType);
+            if (deposit && pickupDate == null) {
+                throw new SQLException("Đơn cọc phải có ngày nhận hàng.");
+            }
+            String status = deposit ? "deposit_pending" : "completed";
+            String pickupStatus = deposit ? "pending" : null;
+            double depositAmount = deposit ? paidAmount : 0;
+
+            String sqlOrder = "INSERT INTO orders " +
+                    "(user_id, total_amount, status, order_type, payment_method, deposit_amount, pickup_date, pickup_status, completed_at) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             psOrder = conn.prepareStatement(sqlOrder, Statement.RETURN_GENERATED_KEYS);
             psOrder.setInt(1, userId);
             psOrder.setDouble(2, total);
+            psOrder.setString(3, status);
+            psOrder.setString(4, orderType);
+            psOrder.setString(5, paymentMethod);
+            psOrder.setDouble(6, depositAmount);
+            psOrder.setDate(7, pickupDate);
+            psOrder.setString(8, pickupStatus);
+            psOrder.setTimestamp(9, deposit ? null : new Timestamp(System.currentTimeMillis()));
             psOrder.executeUpdate();
 
             generatedKeys = psOrder.getGeneratedKeys();
@@ -48,21 +72,36 @@ public class OrderDAO {
             }
             psDetail.executeBatch();
 
-            String sqlUpdateProduct = "UPDATE products SET sold_count = sold_count + ?, stock = stock - ? WHERE id = ?";
+            String sqlUpdateProduct = deposit
+                    ? "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?"
+                    : "UPDATE products SET sold_count = sold_count + ?, stock = stock - ? WHERE id = ? AND stock >= ?";
             psUpdateProduct = conn.prepareStatement(sqlUpdateProduct);
             for (CartItem item : cart) {
-                psUpdateProduct.setInt(1, item.getQuantity());
-                psUpdateProduct.setInt(2, item.getQuantity());
-                psUpdateProduct.setInt(3, item.getProduct().getId());
+                if (deposit) {
+                    psUpdateProduct.setInt(1, item.getQuantity());
+                    psUpdateProduct.setInt(2, item.getProduct().getId());
+                    psUpdateProduct.setInt(3, item.getQuantity());
+                } else {
+                    psUpdateProduct.setInt(1, item.getQuantity());
+                    psUpdateProduct.setInt(2, item.getQuantity());
+                    psUpdateProduct.setInt(3, item.getProduct().getId());
+                    psUpdateProduct.setInt(4, item.getQuantity());
+                }
                 psUpdateProduct.addBatch();
             }
-            psUpdateProduct.executeBatch();
+            int[] stockResults = psUpdateProduct.executeBatch();
+            for (int result : stockResults) {
+                if (result == 0) {
+                    throw new SQLException("Tồn kho đã thay đổi. Vui lòng kiểm tra lại giỏ hàng.");
+                }
+            }
 
             conn.commit();
-         // After conn.commit() and before return orderId
-            LoyaltyDAO loyaltyDAO = new LoyaltyDAO();
-            int pointsEarned = (int) (total / 1000);
-            loyaltyDAO.addPoints(userId, pointsEarned, total);
+            if (!deposit) {
+                LoyaltyDAO loyaltyDAO = new LoyaltyDAO();
+                int pointsEarned = (int) (total / 1000);
+                loyaltyDAO.addPoints(userId, pointsEarned, total);
+            }
             return orderId;
         } catch (SQLException e) {
             if (conn != null) conn.rollback();
@@ -94,15 +133,120 @@ public class OrderDAO {
             ps.setInt(1, userId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-                Order o = new Order();
-                o.setId(rs.getInt("id"));
-                o.setUserId(rs.getInt("user_id"));
-                o.setOrderDate(rs.getTimestamp("order_date"));
-                o.setTotalAmount(rs.getDouble("total_amount"));
-                o.setStatus(rs.getString("status"));
-                orders.add(o);
+                orders.add(mapOrder(rs));
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return orders;
+    }
+
+    public List<Order> getDepositOrdersByUserId(int userId) {
+        List<Order> orders = new ArrayList<>();
+        String sql = "SELECT * FROM orders WHERE user_id = ? AND order_type = 'deposit' " +
+                "ORDER BY CASE WHEN status = 'deposit_pending' THEN 0 ELSE 1 END, pickup_date, order_date DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) orders.add(mapOrder(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return orders;
+    }
+
+    public int countPendingDeposits(int userId) {
+        String sql = "SELECT COUNT(*) FROM orders WHERE user_id = ? " +
+                "AND order_type = 'deposit' AND status = 'deposit_pending'";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    public boolean markDepositPickedUp(int orderId, int userId) throws SQLException {
+        Connection conn = null;
+        try {
+            conn = DBConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            double total;
+            String lockSql = "SELECT total_amount FROM orders WITH (UPDLOCK, ROWLOCK) " +
+                    "WHERE id = ? AND user_id = ? AND order_type = 'deposit' AND status = 'deposit_pending'";
+            try (PreparedStatement ps = conn.prepareStatement(lockSql)) {
+                ps.setInt(1, orderId);
+                ps.setInt(2, userId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        conn.rollback();
+                        return false;
+                    }
+                    total = rs.getDouble("total_amount");
+                }
+            }
+
+            String soldSql = "UPDATE p SET sold_count = sold_count + x.quantity " +
+                    "FROM products p INNER JOIN (" +
+                    "SELECT product_id, SUM(quantity) quantity FROM order_items WHERE order_id = ? GROUP BY product_id" +
+                    ") x ON x.product_id = p.id";
+            try (PreparedStatement ps = conn.prepareStatement(soldSql)) {
+                ps.setInt(1, orderId);
+                ps.executeUpdate();
+            }
+
+            String updateSql = "UPDATE orders SET status = 'picked_up', pickup_status = 'picked_up', " +
+                    "completed_at = SYSDATETIME() WHERE id = ?";
+            try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                ps.setInt(1, orderId);
+                ps.executeUpdate();
+            }
+            conn.commit();
+
+            LoyaltyDAO loyaltyDAO = new LoyaltyDAO();
+            loyaltyDAO.addPoints(userId, (int) (total / 1000), total);
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) conn.rollback();
+            throw e;
+        } finally {
+            if (conn != null) conn.close();
+        }
+    }
+
+    public int expireOverdueDeposits() throws SQLException {
+        try (Connection conn = DBConnection.getConnection();
+             CallableStatement statement = conn.prepareCall("{call dbo.usp_expire_overdue_deposits}")) {
+            boolean hasResults = statement.execute();
+            while (!hasResults && statement.getUpdateCount() != -1) {
+                hasResults = statement.getMoreResults();
+            }
+            if (hasResults) {
+                try (ResultSet rs = statement.getResultSet()) {
+                    return rs.next() ? rs.getInt("expired_count") : 0;
+                }
+            }
+            return 0;
+        }
+    }
+
+    private Order mapOrder(ResultSet rs) throws SQLException {
+        Order order = new Order();
+        order.setId(rs.getInt("id"));
+        order.setUserId(rs.getInt("user_id"));
+        order.setOrderDate(rs.getTimestamp("order_date"));
+        order.setTotalAmount(rs.getDouble("total_amount"));
+        order.setStatus(rs.getString("status"));
+        order.setOrderType(rs.getString("order_type"));
+        order.setPaymentMethod(rs.getString("payment_method"));
+        order.setDepositAmount(rs.getDouble("deposit_amount"));
+        order.setPickupDate(rs.getDate("pickup_date"));
+        order.setPickupStatus(rs.getString("pickup_status"));
+        return order;
     }
 }

@@ -9,12 +9,15 @@ public class Product {
     private int soldCount;
     private String imageUrl;
     private String category;
+    private String barcode;
 
     // constructors, getters, setters
     public Product() {}
-    public Product(int id, String name, double price, String description, int stock, int soldCount, String imageUrl, String category) {
+    public Product(int id, String name, double price, String description, int stock, int soldCount,
+                   String imageUrl, String category, String barcode) {
         this.id = id; this.name = name; this.price = price; this.description = description;
         this.stock = stock; this.soldCount = soldCount; this.imageUrl = imageUrl; this.category = category;
+        this.barcode = barcode;
     }
     // getters/setters...
     public int getId() { return id; }
@@ -33,4 +36,6 @@ public class Product {
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
+    public String getBarcode() { return barcode; }
+    public void setBarcode(String barcode) { this.barcode = barcode; }
 }

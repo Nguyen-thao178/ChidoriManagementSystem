@@ -25,8 +25,14 @@ public class VNPayServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() + "/cart");
             return;
         }
-        double total = cart.stream().mapToDouble(i -> i.getDiscountedPrice() * i.getQuantity()).sum();
-        long amount = (long) (total * 100);
+        Object payable = session.getAttribute("checkoutPayableAmount");
+        String orderType = (String) session.getAttribute("checkoutOrderType");
+        if (payable == null || orderType == null) {
+            resp.sendRedirect(req.getContextPath() + "/checkout");
+            return;
+        }
+        double payableAmount = ((Number) payable).doubleValue();
+        long amount = (long) (payableAmount * 100);
         String vnp_TxnRef = VNPayConfig.TMN_CODE + System.currentTimeMillis();
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", VNPayConfig.VERSION);
@@ -35,7 +41,9 @@ public class VNPayServlet extends HttpServlet {
         vnp_Params.put("vnp_Amount", String.valueOf(amount));
         vnp_Params.put("vnp_CurrCode", VNPayConfig.CURRENCY);
         vnp_Params.put("vnp_TxnRef", vnp_TxnRef);
-        vnp_Params.put("vnp_OrderInfo", "Thanh toan don hang Chidori");
+        vnp_Params.put("vnp_OrderInfo", "deposit".equals(orderType)
+                ? "Dat coc don hang Chidori"
+                : "Thanh toan truc tiep don hang Chidori");
         vnp_Params.put("vnp_OrderType", "other");
         vnp_Params.put("vnp_Locale", VNPayConfig.LOCALE);
         vnp_Params.put("vnp_ReturnUrl", VNPayConfig.RETURN_URL);

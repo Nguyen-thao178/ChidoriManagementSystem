@@ -11,6 +11,9 @@
 <%@ include file="/WEB-INF/views/header.jsp" %>
 <div class="form-container" style="max-width: 600px;">
     <h2>${product == null ? "➕ Thêm sản phẩm mới" : "✏️ Cập nhật sản phẩm"}</h2>
+    <c:if test="${not empty error}">
+        <div class="form-error" role="alert">${error}</div>
+    </c:if>
     <form action="${pageContext.request.contextPath}/admin/products" method="post">
         <input type="hidden" name="action" value="${product == null ? 'create' : 'update'}">
         <c:if test="${product != null}">
@@ -26,6 +29,12 @@
             <option value="Tea" ${product.category == 'Tea' ? 'selected' : ''}>Tea</option>
             <option value="Pastry" ${product.category == 'Pastry' ? 'selected' : ''}>Pastry</option>
         </select>
+
+        <label for="barcode">Mã vạch:</label>
+        <input type="text" id="barcode" name="barcode" value="${product.barcode}"
+               inputmode="numeric" maxlength="16" autocomplete="off"
+               placeholder="Quét hoặc nhập 13 chữ số EAN-13">
+        <small class="field-hint">Hỗ trợ EAN-13 có check digit hợp lệ; mã phải là duy nhất.</small>
 
         <label>Giá (VNĐ):</label>
         <input type="number" name="price" step="1000" value="${product.price}" required>

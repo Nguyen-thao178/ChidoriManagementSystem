@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.sql.Date;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -43,14 +44,39 @@ public class VNPayReturnServlet extends HttpServlet {
         HttpSession session = req.getSession();
         User user = (User) session.getAttribute("user");
         List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
-        if (user != null && cart != null && !cart.isEmpty() && calculatedHash.equals(vnp_SecureHash)) {
+        String orderType = (String) session.getAttribute("checkoutOrderType");
+        Date pickupDate = (Date) session.getAttribute("checkoutPickupDate");
+        Object payable = session.getAttribute("checkoutPayableAmount");
+        if (user != null && cart != null && !cart.isEmpty() && orderType != null && payable != null
+                && calculatedHash.equalsIgnoreCase(vnp_SecureHash)) {
             String responseCode = fields.get("vnp_ResponseCode");
             if ("00".equals(responseCode)) {
                 double total = cart.stream().mapToDouble(i -> i.getDiscountedPrice() * i.getQuantity()).sum();
+                double expectedPayable = "deposit".equals(orderType)
+                        ? Math.round(total * OrderDAO.DEFAULT_DEPOSIT_RATE)
+                        : total;
+                if (Math.abs(expectedPayable - ((Number) payable).doubleValue()) > 0.01) {
+                    req.setAttribute("paymentStatus", "error");
+                    req.setAttribute("message", "Giỏ hàng đã thay đổi trong lúc thanh toán. Không thể tạo đơn.");
+                    req.getRequestDispatcher("/WEB-INF/views/payment_result.jsp").forward(req, resp);
+                    return;
+                }
                 try {
-                    orderDAO.createOrder(user.getId(), cart, total);
+                    orderDAO.createOrder(
+                            user.getId(),
+                            cart,
+                            total,
+                            orderType,
+                            "vnpay",
+                            pickupDate,
+                            ((Number) payable).doubleValue()
+                    );
                     session.removeAttribute("cart");
+                    session.removeAttribute("checkoutOrderType");
+                    session.removeAttribute("checkoutPickupDate");
+                    session.removeAttribute("checkoutPayableAmount");
                     req.setAttribute("paymentStatus", "success");
+                    req.setAttribute("depositOrder", "deposit".equals(orderType));
                 } catch (Exception e) {
                     req.setAttribute("paymentStatus", "error");
                     req.setAttribute("message", e.getMessage());

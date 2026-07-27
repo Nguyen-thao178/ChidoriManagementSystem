@@ -31,7 +31,7 @@ public class UpdateCartServlet extends HttpServlet {
                     if (quantity <= 0) {
                         cart.remove(item);
                     } else {
-                        item.setQuantity(quantity);
+                        item.setQuantity(Math.min(quantity, item.getProduct().getStock()));
                     }
                     break;
                 }
