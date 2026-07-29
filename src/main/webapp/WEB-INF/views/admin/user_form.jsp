@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${user == null ? "Thêm nhân viên" : "Sửa nhân viên"} - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
     <style>
         .form-container { max-width: 500px; margin: 2rem auto; }
         .form-container select { width: 100%; padding: 0.8rem; background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 12px; color: white; }
@@ -16,7 +16,11 @@
 <%@ include file="/WEB-INF/views/header.jsp" %>
 <div class="form-container">
     <h2>${user == null ? "➕ Thêm nhân viên mới" : "✏️ Cập nhật nhân viên"}</h2>
+    <c:if test="${not empty error}">
+        <div class="form-error" role="alert">${error}</div>
+    </c:if>
     <form method="post">
+        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
         <input type="hidden" name="action" value="${user == null ? 'create' : 'update'}">
         <c:if test="${user != null}">
             <input type="hidden" name="id" value="${user.id}">
@@ -36,8 +40,10 @@
 
         <label>Vai trò:</label>
         <select name="role" required>
-            <option value="admin" ${user.role == 'admin' ? 'selected' : ''}>Admin</option>
-            <option value="manager" ${user.role == 'manager' ? 'selected' : ''}>Manager</option>
+            <c:if test="${not managerLimited}">
+                <option value="admin" ${user.role == 'admin' ? 'selected' : ''}>Admin</option>
+                <option value="manager" ${user.role == 'manager' ? 'selected' : ''}>Manager</option>
+            </c:if>
             <option value="staff" ${user.role == 'staff' ? 'selected' : ''}>Staff</option>
             <option value="customer" ${user.role == 'customer' ? 'selected' : ''}>Customer</option>
         </select>

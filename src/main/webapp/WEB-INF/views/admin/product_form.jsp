@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <title>${product == null ? "Thêm mới" : "Cập nhật"} sản phẩm - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
 </head>
 <body>
 <%@ include file="/WEB-INF/views/header.jsp" %>
@@ -15,6 +15,7 @@
         <div class="form-error" role="alert">${error}</div>
     </c:if>
     <form action="${pageContext.request.contextPath}/admin/products" method="post">
+        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
         <input type="hidden" name="action" value="${product == null ? 'create' : 'update'}">
         <c:if test="${product != null}">
             <input type="hidden" name="id" value="${product.id}">

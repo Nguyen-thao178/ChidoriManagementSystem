@@ -2,7 +2,7 @@ package com.cafe.servlet;
 
 import com.cafe.dao.UserDAO;
 import com.cafe.model.User;
-import com.cafe.utils.HashUtil;
+import com.cafe.utils.PasswordUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -64,8 +64,8 @@ public class ChangePasswordServlet extends HttpServlet {
             return;
         }
 
-        if (newPassword.length() < 6) {
-            request.setAttribute("error", "Mật khẩu mới phải có ít nhất 6 ký tự!");
+        if (newPassword.length() < 8) {
+            request.setAttribute("error", "Mật khẩu mới phải có ít nhất 8 ký tự!");
             request.getRequestDispatcher("/WEB-INF/views/changePassword.jsp").forward(request, response);
             return;
         }
@@ -80,15 +80,14 @@ public class ChangePasswordServlet extends HttpServlet {
                 return;
             }
 
-            String oldPasswordHash = HashUtil.sha256(oldPassword);
-            if (!currentHash.equals(oldPasswordHash)) {
+            if (!PasswordUtil.verify(oldPassword, currentHash)) {
                 request.setAttribute("error", "Mật khẩu cũ không đúng!");
                 request.getRequestDispatcher("/WEB-INF/views/changePassword.jsp").forward(request, response);
                 return;
             }
 
-            String newPasswordHash = HashUtil.sha256(newPassword);
-            boolean success = userDAO.changePassword(userId, oldPasswordHash, newPasswordHash);
+            String newPasswordHash = PasswordUtil.hash(newPassword);
+            boolean success = userDAO.updatePassword(userId, newPasswordHash);
 
             if (success) {
                 request.setAttribute("message", "Đổi mật khẩu thành công!");

@@ -21,8 +21,17 @@ public class UpdateCartServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() + "/cart");
             return;
         }
-        int productId = Integer.parseInt(idStr);
-        int quantity = Integer.parseInt(quantityStr);
+        int productId;
+        int quantity;
+        try {
+            productId = Integer.parseInt(idStr);
+            quantity = Integer.parseInt(quantityStr);
+            if (productId <= 0) throw new NumberFormatException();
+        } catch (NumberFormatException exception) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                    "ID hoặc số lượng sản phẩm không hợp lệ.");
+            return;
+        }
         HttpSession session = req.getSession();
         List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
         if (cart != null) {

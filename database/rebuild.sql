@@ -40,14 +40,14 @@ GO
 CREATE TABLE dbo.users (
     id            INT IDENTITY(1,1) PRIMARY KEY,
     username      VARCHAR(50) NOT NULL,
-    password_hash CHAR(64) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     fullname      NVARCHAR(120) NOT NULL,
     email         VARCHAR(254) NOT NULL,
     role          VARCHAR(20) NOT NULL CONSTRAINT DF_users_role DEFAULT 'member',
     created_at    DATETIME2 NOT NULL CONSTRAINT DF_users_created_at DEFAULT SYSDATETIME(),
     CONSTRAINT UX_users_username UNIQUE (username),
     CONSTRAINT UX_users_email UNIQUE (email),
-    CONSTRAINT CK_users_role CHECK (role IN ('admin', 'member', 'staff'))
+    CONSTRAINT CK_users_role CHECK (role IN ('admin', 'manager', 'staff', 'customer', 'member'))
 );
 
 CREATE TABLE dbo.products (
@@ -175,6 +175,10 @@ CREATE TABLE dbo.payments (
     CONSTRAINT CK_payments_status CHECK (status IN ('pending', 'paid', 'failed', 'refunded'))
 );
 
+CREATE UNIQUE INDEX UX_payments_transaction_reference
+    ON dbo.payments(transaction_reference)
+    WHERE transaction_reference IS NOT NULL;
+
 CREATE TABLE dbo.order_status_history (
     id            BIGINT IDENTITY(1,1) PRIMARY KEY,
     order_id      INT NOT NULL,
@@ -226,6 +230,18 @@ CREATE TABLE dbo.system_settings (
         FOREIGN KEY (updated_by_user_id) REFERENCES dbo.users(id),
     CONSTRAINT UX_system_settings_key UNIQUE (setting_key)
 );
+
+CREATE TABLE dbo.chat_history (
+    id         BIGINT IDENTITY(1,1) PRIMARY KEY,
+    user_id    INT NULL,
+    question   NVARCHAR(500) NOT NULL,
+    answer     NVARCHAR(2000) NOT NULL,
+    provider   VARCHAR(20) NOT NULL CONSTRAINT DF_chat_history_provider DEFAULT 'local',
+    created_at DATETIME2 NOT NULL CONSTRAINT DF_chat_history_created_at DEFAULT SYSDATETIME(),
+    CONSTRAINT FK_chat_history_user
+        FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE SET NULL,
+    CONSTRAINT CK_chat_history_provider CHECK (provider IN ('local', 'gemini'))
+);
 GO
 
 CREATE INDEX IX_orders_user_date ON dbo.orders(user_id, order_date DESC);
@@ -241,6 +257,9 @@ CREATE INDEX IX_promotion_items_product_dates
     ON dbo.promotion_items(product_id, status, start_date, end_date);
 CREATE INDEX IX_promotion_items_promotion_product
     ON dbo.promotion_items(promotion_id, product_id);
+CREATE INDEX IX_chat_history_created_at
+    ON dbo.chat_history(created_at DESC)
+    INCLUDE (user_id, provider);
 GO
 
 CREATE OR ALTER PROCEDURE dbo.usp_products_find_by_barcode
@@ -316,6 +335,29 @@ BEGIN
 
     IF @@ROWCOUNT = 0
         THROW 51005, 'Product does not exist or stock would become negative.', 1;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE dbo.usp_chat_history_report_by_date
+    @report_date DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        ch.id,
+        ch.user_id,
+        u.username,
+        u.fullname,
+        ch.question,
+        ch.answer,
+        ch.provider,
+        ch.created_at
+    FROM dbo.chat_history ch
+    LEFT JOIN dbo.users u ON u.id = ch.user_id
+    WHERE ch.created_at >= @report_date
+      AND ch.created_at < DATEADD(DAY, 1, @report_date)
+    ORDER BY ch.created_at DESC, ch.id DESC;
 END;
 GO
 
@@ -459,28 +501,6 @@ BEGIN
     INNER JOIN deleted d ON d.id = i.id
     WHERE i.status <> d.status;
 
-    INSERT INTO dbo.payments
-        (order_id, payment_stage, payment_method, amount, status, paid_at)
-    SELECT
-        i.id,
-        'balance',
-        i.payment_method,
-        i.total_amount - i.deposit_amount,
-        'paid',
-        SYSDATETIME()
-    FROM inserted i
-    INNER JOIN deleted d ON d.id = i.id
-    WHERE i.order_type = 'deposit'
-      AND d.status = 'deposit_pending'
-      AND i.status = 'picked_up'
-      AND i.total_amount > i.deposit_amount
-      AND NOT EXISTS (
-          SELECT 1
-          FROM dbo.payments p
-          WHERE p.order_id = i.id
-            AND p.payment_stage = 'balance'
-            AND p.status = 'paid'
-      );
 END;
 GO
 
@@ -541,6 +561,21 @@ AS
         END AS inventory_status,
         updated_at
     FROM dbo.products;
+GO
+
+CREATE OR ALTER VIEW dbo.vw_chat_history_report
+AS
+    SELECT
+        ch.id,
+        ch.user_id,
+        u.username,
+        u.fullname,
+        ch.question,
+        ch.answer,
+        ch.provider,
+        ch.created_at
+    FROM dbo.chat_history ch
+    LEFT JOIN dbo.users u ON u.id = ch.user_id;
 GO
 
 CREATE OR ALTER VIEW dbo.vw_order_summary
@@ -614,20 +649,29 @@ AS
     WHERE o.order_type = 'deposit';
 GO
 
-/*
-  Development account:
-    username: admin
-    password: admin123
-  Change this password immediately after first login.
-*/
 INSERT INTO dbo.users (username, password_hash, fullname, email, role)
-VALUES (
-    'admin',
-    '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
-    N'Chidori Administrator',
-    'admin@chidori.local',
-    'admin'
-);
+VALUES
+    (
+        'admin',
+        'pbkdf2$210000$JeFAEjpfXxgGTdzBc6t97w$saF7Jxjo5ziAMct8Eye5_1AIB-_gdkLsx1Lr6RjpHs4',
+        N'Chidori Administrator',
+        'admin@chidori.local',
+        'admin'
+    ),
+    (
+        'manager1',
+        'pbkdf2$210000$ijizkzJXcvfVJsUyh42m-Q$f077hGlLsI6oP6CL3-tkYaShCLTZlwDznUVC0GY590s',
+        N'Quản lý Chidori',
+        'manager1@chidori.local',
+        'manager'
+    ),
+    (
+        'staff1',
+        'pbkdf2$210000$fI4PX7eBtBv2sgKiLYO63Q$XzIlXu1ptMT_JXXh5l0IzDGo1AKH9LZrBAu4N3oqCCQ',
+        N'Nhân viên Chidori',
+        'staff1@chidori.local',
+        'staff'
+    );
 
 /*
   These are development barcodes. Replace them with the codes printed on

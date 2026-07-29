@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý nhân viên - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
 </head>
 <body>
 <%@ include file="/WEB-INF/views/header.jsp" %>
@@ -28,8 +28,20 @@
                     <td>${u.email}</td>
                     <td>${u.role}</td>
                     <td>
-                        <a href="?action=edit&id=${u.id}">✏️ Sửa</a> |
-                        <a href="?action=delete&id=${u.id}" onclick="return confirm('Xóa nhân viên này?')">🗑️ Xóa</a>
+                        <c:if test="${sessionScope.user.role == 'admin'
+                                || u.role == 'staff' || u.role == 'customer'}">
+                            <a href="?action=edit&id=${u.id}">✏️ Sửa</a>
+                            <c:if test="${sessionScope.user.id != u.id}">
+                                <form method="post" action="${pageContext.request.contextPath}/admin/users"
+                                      class="inline-action"
+                                      onsubmit="return confirm('Xóa nhân viên này?');">
+                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="${u.id}">
+                                    <button type="submit" class="link-button">🗑️ Xóa</button>
+                                </form>
+                            </c:if>
+                        </c:if>
                     </td>
                 </tr>
             </c:forEach>

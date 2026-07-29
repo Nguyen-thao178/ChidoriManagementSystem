@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng ký thành viên - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
     <style>
         /* Additional styles for registration page */
         .register-container {
@@ -116,6 +116,7 @@
     </c:if>
 
     <form action="${pageContext.request.contextPath}/register-member" method="post">
+        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
         <div class="form-group">
             <label>Username</label>
             <input type="text" name="username" placeholder="Tên đăng nhập" required>

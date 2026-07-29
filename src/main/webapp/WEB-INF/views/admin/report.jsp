@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Báo cáo doanh thu - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
     <style>
         .report-container {
             max-width: 1200px;
@@ -124,6 +124,84 @@
         .product-list li span:last-child {
             color: var(--orange);
         }
+        .section-heading-row {
+            display: flex;
+            margin-top: 2rem;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .section-heading-row .section-title {
+            margin: 0;
+        }
+        .print-chat-btn {
+            display: inline-flex;
+            padding: 0.65rem 1rem;
+            align-items: center;
+            gap: 0.45rem;
+            border: 1px solid rgba(255, 102, 47, .35);
+            border-radius: 12px;
+            color: white;
+            font-size: .82rem;
+            font-weight: 700;
+            text-decoration: none;
+            background: linear-gradient(135deg, #ff6e32, #d53c25);
+            box-shadow: 0 10px 24px rgba(213, 60, 37, .18);
+        }
+        .chat-report-card {
+            margin-top: 1rem;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--card-bg);
+        }
+        .chat-report-summary {
+            display: flex;
+            padding: 1rem 1.1rem;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(110deg, rgba(255, 87, 34, .09), transparent);
+        }
+        .chat-count {
+            padding: .35rem .65rem;
+            border-radius: 999px;
+            color: #ff986c;
+            font-size: .75rem;
+            background: rgba(255, 87, 34, .1);
+        }
+        .chat-question, .chat-answer {
+            max-width: 420px;
+            margin: 0;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            line-height: 1.45;
+        }
+        .chat-answer {
+            margin-top: .45rem;
+            color: var(--text-secondary);
+            font-size: .8rem;
+        }
+        .chat-label {
+            color: #ff8a57;
+            font-size: .62rem;
+            font-weight: 800;
+            letter-spacing: .08em;
+        }
+        .provider-tag {
+            display: inline-block;
+            padding: .3rem .55rem;
+            border-radius: 999px;
+            color: #ff9668;
+            font-size: .68rem;
+            background: rgba(255, 87, 34, .1);
+        }
+        .empty-chat-report {
+            padding: 2.5rem 1rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
         @media (max-width: 768px) {
             .stats-grid {
                 grid-template-columns: 1fr;
@@ -131,6 +209,10 @@
             .filter-form {
                 flex-direction: column;
                 align-items: stretch;
+            }
+            .section-heading-row {
+                align-items: flex-start;
+                flex-direction: column;
             }
         }
     </style>
@@ -190,6 +272,67 @@
             </c:forEach>
         </ul>
     </div>
+
+    <div class="section-heading-row">
+        <h3 class="section-title">💬 Lịch sử Chatbox ngày ${reportDate}</h3>
+        <a class="print-chat-btn"
+           href="${pageContext.request.contextPath}/admin/report/chat-history/print?date=${reportDate}">
+            🖨 In lịch sử Chatbox
+        </a>
+    </div>
+    <section class="chat-report-card">
+        <div class="chat-report-summary">
+            <span>Câu hỏi và phản hồi của Chidori Assistant</span>
+            <span class="chat-count">${chatHistory.size()} lượt hỏi đáp</span>
+        </div>
+        <c:choose>
+            <c:when test="${empty chatHistory}">
+                <div class="empty-chat-report">
+                    Chưa có hội thoại nào trong ngày ${reportDate}.
+                </div>
+            </c:when>
+            <c:otherwise>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Nhân viên</th>
+                            <th>Hội thoại</th>
+                            <th>Nguồn trả lời</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <c:forEach var="chat" items="${chatHistory}">
+                            <tr>
+                                <td><fmt:formatDate value="${chat.createdAt}" pattern="HH:mm:ss"/></td>
+                                <td>
+                                    <strong><c:out value="${chat.fullname}"/></strong><br>
+                                    <small>@<c:out value="${chat.username}"/></small>
+                                </td>
+                                <td>
+                                    <p class="chat-question">
+                                        <span class="chat-label">CÂU HỎI</span><br>
+                                        <c:out value="${chat.question}"/>
+                                    </p>
+                                    <p class="chat-answer">
+                                        <span class="chat-label">TRẢ LỜI</span><br>
+                                        <c:out value="${chat.answer}"/>
+                                    </p>
+                                </td>
+                                <td>
+                                    <span class="provider-tag">
+                                        ${chat.provider == 'gemini' ? 'Gemini' : 'Nội bộ'}
+                                    </span>
+                                </td>
+                            </tr>
+                        </c:forEach>
+                        </tbody>
+                    </table>
+                </div>
+            </c:otherwise>
+        </c:choose>
+    </section>
 </div>
 
 <%@ include file="/WEB-INF/views/footer.jsp" %>

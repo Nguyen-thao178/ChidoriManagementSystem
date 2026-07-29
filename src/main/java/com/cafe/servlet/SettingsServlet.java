@@ -52,8 +52,12 @@ public class SettingsServlet extends HttpServlet {
         String key = req.getParameter("key");
         String value = req.getParameter("value");
         if (key != null && value != null && !key.trim().isEmpty()) {
-            settingsDAO.updateSetting(key, value);
+            boolean updated = settingsDAO.updateSetting(
+                    key.trim(), value.trim(), user.getId());
+            resp.sendRedirect(req.getContextPath() + "/admin/settings?"
+                    + (updated ? "success=1" : "error=1"));
+            return;
         }
-        resp.sendRedirect(req.getContextPath() + "/admin/settings");
+        resp.sendRedirect(req.getContextPath() + "/admin/settings?error=1");
     }
 }

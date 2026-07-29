@@ -2,122 +2,249 @@ package com.cafe.servlet;
 
 import com.cafe.dao.UserDAO;
 import com.cafe.model.User;
-import com.cafe.utils.HashUtil;
+import com.cafe.utils.PasswordUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Set;
 
 @WebServlet("/admin/users")
 public class UserManagementServlet extends HttpServlet {
-    private UserDAO userDAO = new UserDAO();
+    private static final Set<String> ALLOWED_ROLES =
+            Set.of("admin", "manager", "staff", "customer");
+    private final UserDAO userDAO = new UserDAO();
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        if (!isAdmin(req)) {
-            resp.sendRedirect(req.getContextPath() + "/home");
+        User actor = currentUser(request);
+        if (!canManageUsers(actor)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
-
-        String action = req.getParameter("action");
+        prepareRoleContext(request, actor);
+        String action = request.getParameter("action");
         try {
-            if ("edit".equals(action)) {
-                int id = Integer.parseInt(req.getParameter("id"));
-                User user = userDAO.findById(id);
-                req.setAttribute("user", user);
-                req.getRequestDispatcher("/WEB-INF/views/admin/user_form.jsp").forward(req, resp);
-            } else {
-                List<User> users = userDAO.findAll(); // ✅ Sửa từ getAllUsers
-                req.setAttribute("users", users);
-                req.getRequestDispatcher("/WEB-INF/views/admin/user_list.jsp").forward(req, resp);
+            if ("create".equals(action)) {
+                request.getRequestDispatcher("/WEB-INF/views/admin/user_form.jsp")
+                        .forward(request, response);
+                return;
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            req.setAttribute("error", "Lỗi tải dữ liệu: " + e.getMessage());
-            req.getRequestDispatcher("/WEB-INF/views/error.jsp").forward(req, resp);
-        }
-    }
-
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-            throws IOException {
-        if (!isAdmin(req)) {
-            resp.sendRedirect(req.getContextPath() + "/home");
-            return;
-        }
-
-        String action = req.getParameter("action");
-        try {
-            if ("delete".equals(action)) {
-                int id = Integer.parseInt(req.getParameter("id"));
-                userDAO.deleteById(id); // ✅ Sửa từ deleteUser
-
-            } else if ("update".equals(action)) {
-                int id = Integer.parseInt(req.getParameter("id"));
-                String fullname = req.getParameter("fullname");
-                String email = req.getParameter("email");
-                String role = req.getParameter("role");
-
-                User u = new User();
-                u.setId(id);
-                u.setFullname(fullname);
-                u.setEmail(email);
-                u.setRole(role);
-                // Cần lấy username hiện tại từ DB để không bị null
-                User existing = userDAO.findById(id);
-                if (existing != null) {
-                    u.setUsername(existing.getUsername());
-                }
-                userDAO.update(u); // ✅ Sửa từ updateUser
-
-                // Cập nhật mật khẩu nếu có
-                String newPass = req.getParameter("password");
-                if (newPass != null && !newPass.trim().isEmpty()) {
-                    String hashed = HashUtil.sha256(newPass); // ✅ Sửa từ PasswordUtil.hashSHA256
-                    userDAO.updatePassword(id, hashed);
-                }
-
-            } else if ("create".equals(action)) {
-                String username = req.getParameter("username");
-                String password = req.getParameter("password");
-                String fullname = req.getParameter("fullname");
-                String email = req.getParameter("email");
-                String role = req.getParameter("role");
-
-                // Kiểm tra username đã tồn tại
-                if (userDAO.findByUsername(username) != null) {
-                    resp.sendRedirect(req.getContextPath() + "/admin/users?error=Username đã tồn tại!");
+            if ("edit".equals(action)) {
+                Integer id = parsePositiveInt(request.getParameter("id"));
+                if (id == null) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID người dùng không hợp lệ.");
                     return;
                 }
-
-                User u = new User();
-                u.setUsername(username);
-                u.setFullname(fullname);
-                u.setEmail(email);
-                u.setRole(role);
-
-                // Hash password
-                String hashedPassword = HashUtil.sha256(password); // ✅ Sửa từ PasswordUtil.hashSHA256
-                u.setPasswordHash(hashedPassword);
-
-                userDAO.insert(u); // ✅ Sửa từ createUser
+                User user = userDAO.findById(id);
+                if (user == null) {
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                    return;
+                }
+                if (!canManageTarget(actor, user)) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                            "Bạn chỉ có thể quản lý tài khoản cấp dưới.");
+                    return;
+                }
+                request.setAttribute("user", user);
+                request.getRequestDispatcher("/WEB-INF/views/admin/user_form.jsp")
+                        .forward(request, response);
+                return;
             }
-
-            resp.sendRedirect(req.getContextPath() + "/admin/users");
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            resp.sendRedirect(req.getContextPath() + "/admin/users?error=" + e.getMessage());
-        } catch (NumberFormatException e) {
-            resp.sendRedirect(req.getContextPath() + "/admin/users?error=ID không hợp lệ");
+            List<User> users = userDAO.findAll();
+            request.setAttribute("users", users);
+            request.getRequestDispatcher("/WEB-INF/views/admin/user_list.jsp")
+                    .forward(request, response);
+        } catch (SQLException exception) {
+            throw new ServletException("Không thể tải dữ liệu người dùng.", exception);
         }
     }
 
-    private boolean isAdmin(HttpServletRequest req) {
-        User user = (User) req.getSession().getAttribute("user");
-        return user != null && "admin".equals(user.getRole());
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, ServletException {
+        request.setCharacterEncoding("UTF-8");
+        User actor = currentUser(request);
+        if (!canManageUsers(actor)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
+        prepareRoleContext(request, actor);
+        String action = request.getParameter("action");
+        try {
+            if ("delete".equals(action)) {
+                deleteUser(request, response);
+                return;
+            }
+            if ("update".equals(action)) {
+                saveUser(request, response, true);
+                return;
+            }
+            if ("create".equals(action)) {
+                saveUser(request, response, false);
+                return;
+            }
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Hành động không hợp lệ.");
+        } catch (SQLException exception) {
+            redirectWithError(request, response, exception.getMessage());
+        }
+    }
+
+    private void saveUser(HttpServletRequest request, HttpServletResponse response,
+                          boolean update) throws SQLException, IOException, ServletException {
+        Integer id = update ? parsePositiveInt(request.getParameter("id")) : null;
+        if (update && id == null) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID người dùng không hợp lệ.");
+            return;
+        }
+
+        String username = trim(request.getParameter("username"));
+        String fullname = trim(request.getParameter("fullname"));
+        String email = trim(request.getParameter("email"));
+        String password = request.getParameter("password");
+        String role = trim(request.getParameter("role"));
+        User actor = currentUser(request);
+        Set<String> allowedRoles = allowedRolesFor(actor);
+        if (username == null || fullname == null || email == null
+                || !email.matches("^[A-Za-z0-9+_.-]+@[^\\s@]+$")
+                || !allowedRoles.contains(role)
+                || (!update && (password == null || password.length() < 8))
+                || (password != null && !password.isBlank() && password.length() < 8)) {
+            request.setAttribute("error",
+                    "Vui lòng nhập đủ dữ liệu; mật khẩu tối thiểu 8 ký tự và role phải hợp lệ.");
+            request.getRequestDispatcher("/WEB-INF/views/admin/user_form.jsp")
+                    .forward(request, response);
+            return;
+        }
+
+        if (!update && userDAO.findByUsername(username) != null) {
+            request.setAttribute("error", "Username đã tồn tại.");
+            request.getRequestDispatcher("/WEB-INF/views/admin/user_form.jsp")
+                    .forward(request, response);
+            return;
+        }
+        User emailOwner = userDAO.findByEmail(email);
+        if (emailOwner != null && (!update || emailOwner.getId() != id)) {
+            request.setAttribute("error", "Email đã được sử dụng.");
+            request.getRequestDispatcher("/WEB-INF/views/admin/user_form.jsp")
+                    .forward(request, response);
+            return;
+        }
+
+        User user = new User();
+        if (update) {
+            User existing = userDAO.findById(id);
+            if (existing == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+            if (!canManageTarget(actor, existing)
+                    || (actor.getId() == id && !"admin".equalsIgnoreCase(role))) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                        "Không thể thay đổi tài khoản ngang cấp hoặc cấp trên.");
+                return;
+            }
+            user.setId(id);
+            user.setUsername(existing.getUsername());
+            user.setFullname(fullname);
+            user.setEmail(email);
+            user.setRole(role);
+            userDAO.update(user);
+            if (password != null && !password.isBlank()) {
+                userDAO.updatePassword(id, PasswordUtil.hash(password));
+            }
+        } else {
+            user.setUsername(username);
+            user.setFullname(fullname);
+            user.setEmail(email);
+            user.setRole(role);
+            user.setPasswordHash(PasswordUtil.hash(password));
+            userDAO.insert(user);
+        }
+        response.sendRedirect(request.getContextPath() + "/admin/users?success=1");
+    }
+
+    private void deleteUser(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException {
+        Integer id = parsePositiveInt(request.getParameter("id"));
+        User current = (User) request.getSession().getAttribute("user");
+        if (id == null) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID người dùng không hợp lệ.");
+            return;
+        }
+        if (current.getId() == id) {
+            redirectWithError(request, response, "Không thể tự xóa tài khoản đang đăng nhập.");
+            return;
+        }
+        User target = userDAO.findById(id);
+        if (target == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        if (!canManageTarget(current, target)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Bạn chỉ có thể xóa tài khoản cấp dưới.");
+            return;
+        }
+        userDAO.deleteById(id);
+        response.sendRedirect(request.getContextPath() + "/admin/users?success=1");
+    }
+
+    private void redirectWithError(HttpServletRequest request, HttpServletResponse response,
+                                   String message) throws IOException {
+        response.sendRedirect(request.getContextPath() + "/admin/users?error="
+                + URLEncoder.encode(message == null ? "Không thể xử lý yêu cầu." : message,
+                StandardCharsets.UTF_8));
+    }
+
+    private User currentUser(HttpServletRequest request) {
+        return (User) request.getSession().getAttribute("user");
+    }
+
+    private boolean canManageUsers(User user) {
+        return user != null && ("admin".equalsIgnoreCase(user.getRole())
+                || "manager".equalsIgnoreCase(user.getRole()));
+    }
+
+    private Set<String> allowedRolesFor(User actor) {
+        if (actor != null && "admin".equalsIgnoreCase(actor.getRole())) {
+            return ALLOWED_ROLES;
+        }
+        return Set.of("staff", "customer");
+    }
+
+    private boolean canManageTarget(User actor, User target) {
+        if (actor == null || target == null) return false;
+        if ("admin".equalsIgnoreCase(actor.getRole())) return true;
+        return "manager".equalsIgnoreCase(actor.getRole())
+                && ("staff".equalsIgnoreCase(target.getRole())
+                || "customer".equalsIgnoreCase(target.getRole()));
+    }
+
+    private void prepareRoleContext(HttpServletRequest request, User actor) {
+        request.setAttribute("managerLimited",
+                actor != null && "manager".equalsIgnoreCase(actor.getRole()));
+    }
+
+    private Integer parsePositiveInt(String value) {
+        try {
+            int parsed = Integer.parseInt(value);
+            return parsed > 0 ? parsed : null;
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    private String trim(String value) {
+        if (value == null || value.trim().isEmpty()) return null;
+        return value.trim();
     }
 }

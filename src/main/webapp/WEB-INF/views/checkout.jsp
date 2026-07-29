@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thanh toán - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-vnpay3">
 </head>
 <body>
 <%@ include file="header.jsp" %>
@@ -79,6 +79,7 @@
 
                 <section class="checkout-options">
                     <form id="checkoutForm">
+                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                         <fieldset>
                             <legend><span>02</span> Hình thức giao dịch</legend>
                             <label class="choice-card">
@@ -128,11 +129,27 @@
                                 <i class="choice-icon vnpay-icon">V</i>
                                 <span>
                                     <strong>VNPay</strong>
-                                    <small>Thanh toán toàn bộ hoặc tiền cọc qua VNPay.</small>
+                                    <small>
+                                        Thanh toán toàn bộ hoặc tiền cọc qua VNPay
+                                        <c:if test="${vnpaySandbox}"> sandbox.</c:if>
+                                    </small>
                                 </span>
                                 <b class="choice-check">✓</b>
                             </label>
                         </fieldset>
+
+                        <c:if test="${vnpaySandbox}">
+                            <div class="vnpay-sandbox-note" id="vnpaySandboxNote" hidden>
+                                <strong>🧪 Chế độ VNPay Sandbox</strong>
+                                <p>Không quét QR bằng ứng dụng ngân hàng thật. Hệ thống sẽ chuyển thẳng tới NCB test.</p>
+                                <dl>
+                                    <div><dt>Số thẻ</dt><dd>9704198526191432198</dd></div>
+                                    <div><dt>Chủ thẻ</dt><dd>NGUYEN VAN A</dd></div>
+                                    <div><dt>Ngày phát hành</dt><dd>07/15</dd></div>
+                                    <div><dt>OTP</dt><dd>123456</dd></div>
+                                </dl>
+                            </div>
+                        </c:if>
 
                         <div id="paymentSummary" class="payment-summary"></div>
                         <button type="submit" id="submitCheckout" class="btn-primary">
@@ -160,6 +177,7 @@
         const summary = document.getElementById('paymentSummary');
         const submitButton = document.getElementById('submitCheckout');
         const message = document.getElementById('paymentMessage');
+        const sandboxNote = document.getElementById('vnpaySandboxNote');
         const money = new Intl.NumberFormat('vi-VN');
 
         function refreshOptions() {
@@ -170,6 +188,7 @@
 
             pickupGroup.hidden = !isDeposit;
             pickupInput.required = isDeposit;
+            if (sandboxNote) sandboxNote.hidden = paymentMethod !== 'vnpay';
             summary.innerHTML =
                 '<strong>Số tiền cần thanh toán: ' + money.format(amount) + '₫</strong>' +
                 '<small>' + (isDeposit ? 'Tiền cọc giữ hàng' : 'Toàn bộ giá trị đơn') +

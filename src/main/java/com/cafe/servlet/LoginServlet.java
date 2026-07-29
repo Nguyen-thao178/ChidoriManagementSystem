@@ -2,7 +2,7 @@ package com.cafe.servlet;
 
 import com.cafe.dao.UserDAO;
 import com.cafe.model.User;
-import com.cafe.utils.HashUtil;
+import com.cafe.utils.PasswordUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -46,10 +46,15 @@ public class LoginServlet extends HttpServlet {
 
             if (user != null) {
                 // Hash mật khẩu nhập vào và so sánh với hash trong DB
-                String hashedInput = HashUtil.sha256(password);
-                if (hashedInput.equals(user.getPasswordHash())) {
+                if (PasswordUtil.verify(password, user.getPasswordHash())) {
                     // Đăng nhập thành công
                     HttpSession session = req.getSession();
+                    req.changeSessionId();
+                    if (PasswordUtil.needsUpgrade(user.getPasswordHash())) {
+                        String upgradedHash = PasswordUtil.hash(password);
+                        userDAO.updatePassword(user.getId(), upgradedHash);
+                        user.setPasswordHash(upgradedHash);
+                    }
                     session.setAttribute("user", user);
                     resp.sendRedirect(req.getContextPath() + "/home");
                     return;

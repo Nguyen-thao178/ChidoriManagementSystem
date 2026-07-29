@@ -1,8 +1,11 @@
 package com.cafe.servlet;
 
 import com.cafe.dao.OrderDAO;
+import com.cafe.dao.PaymentDAO;
 import com.cafe.model.CartItem;
+import com.cafe.model.Payment;
 import com.cafe.model.User;
+import com.cafe.payment.VNPayConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -17,6 +20,7 @@ import java.util.Map;
 @WebServlet("/checkout")
 public class CheckoutServlet extends HttpServlet {
     private OrderDAO orderDAO = new OrderDAO();
+    private PaymentDAO paymentDAO = new PaymentDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -24,6 +28,7 @@ public class CheckoutServlet extends HttpServlet {
         // Hiển thị trang checkout với QR
         req.setAttribute("minPickupDate", LocalDate.now().plusDays(1).toString());
         req.setAttribute("depositPercent", (int) (OrderDAO.DEFAULT_DEPOSIT_RATE * 100));
+        req.setAttribute("vnpaySandbox", VNPayConfig.isSandbox());
         req.getRequestDispatcher("/WEB-INF/views/checkout.jsp").forward(req, resp);
     }
 
@@ -91,12 +96,26 @@ public class CheckoutServlet extends HttpServlet {
                 : total;
 
         if ("vnpay".equals(paymentMethod)) {
-            session.setAttribute("checkoutOrderType", orderType);
-            session.setAttribute("checkoutPickupDate", pickupDate);
-            session.setAttribute("checkoutPayableAmount", payableAmount);
-            result.put("success", true);
-            result.put("redirectUrl", req.getContextPath() + "/vnpay-pay");
-            result.put("message", "Đang chuyển đến VNPay.");
+            if (!VNPayConfig.isConfigured()) {
+                result.put("success", false);
+                result.put("message",
+                        "VNPay chưa được cấu hình trên máy chủ. Vui lòng liên hệ quản trị viên.");
+                writeJson(resp, result);
+                return;
+            }
+            try {
+                Payment payment = paymentDAO.createPendingVNPayOrder(
+                        user.getId(), cart, total, orderType, pickupDate, payableAmount);
+                session.removeAttribute("cart");
+                result.put("success", true);
+                result.put("redirectUrl", req.getContextPath()
+                        + "/vnpay-pay?paymentId=" + payment.getId());
+                result.put("message", "Đơn hàng đã được giữ. Đang chuyển đến VNPay.");
+            } catch (Exception exception) {
+                result.put("success", false);
+                result.put("message", "Không thể khởi tạo giao dịch VNPay: "
+                        + exception.getMessage());
+            }
             writeJson(resp, result);
             return;
         }
@@ -108,12 +127,12 @@ public class CheckoutServlet extends HttpServlet {
             session.removeAttribute("cart");
             result.put("success", true);
             result.put("orderId", orderId);
-            result.put("redirectUrl", "deposit".equals(orderType)
-                    ? req.getContextPath() + "/deposit-orders"
-                    : req.getContextPath() + "/history");
+            result.put("redirectUrl", req.getContextPath() + "/receipt?orderId=" + orderId
+                    + "&autoprint=1"
+                    + ("deposit".equals(orderType) ? "&stage=deposit" : ""));
             result.put("message", "deposit".equals(orderType)
-                    ? "Đã tạo đơn cọc và giữ hàng thành công."
-                    : "Thanh toán trực tiếp thành công.");
+                    ? "Đã nhận tiền cọc. Đang in hóa đơn..."
+                    : "Thanh toán thành công. Đang in hóa đơn...");
         } catch (Exception e) {
             result.put("success", false);
             result.put("message", "Không thể tạo đơn hàng: " + e.getMessage());

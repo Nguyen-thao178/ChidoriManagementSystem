@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cài đặt hệ thống - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
     <style>
         .settings-container {
             max-width: 700px;
@@ -129,9 +129,10 @@
         <div class="message error" style="display: block;">Cập nhật thất bại, vui lòng thử lại.</div>
     </c:if>
 
-    <form id="settingsForm" class="settings-form" action="${pageContext.request.contextPath}/admin/settings" method="post">
+    <div id="settingsForm" class="settings-form">
         <c:forEach var="s" items="${settings}">
-            <div class="setting-item">
+            <form class="setting-item" action="${pageContext.request.contextPath}/admin/settings" method="post">
+                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                 <label>
                     <span>${s.key}</span>
                     <span class="key-name">${s.key}</span>
@@ -139,10 +140,10 @@
                 <input type="hidden" name="key" value="${s.key}">
                 <input type="text" name="value" value="${s.value}" required>
                 <div class="description">${s.description}</div>
-            </div>
+                <button type="submit" class="save-btn">💾 Lưu ${s.key}</button>
+            </form>
         </c:forEach>
-        <button type="submit" class="save-btn">💾 Lưu cài đặt</button>
-    </form>
+    </div>
 </div>
 
 <%@ include file="/WEB-INF/views/footer.jsp" %>

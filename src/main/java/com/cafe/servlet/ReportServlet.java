@@ -1,5 +1,6 @@
 package com.cafe.servlet;
 
+import com.cafe.dao.ChatHistoryDAO;
 import com.cafe.dao.ReportDAO;
 import com.cafe.model.User;
 import jakarta.servlet.ServletException;
@@ -7,11 +8,13 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 @WebServlet("/admin/report")
 public class ReportServlet extends HttpServlet {
     private ReportDAO reportDAO = new ReportDAO();
+    private ChatHistoryDAO chatHistoryDAO = new ChatHistoryDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -22,10 +25,13 @@ public class ReportServlet extends HttpServlet {
             return;
         }
 
-        String dateParam = req.getParameter("date");
-        if (dateParam == null || dateParam.isEmpty()) {
-            dateParam = LocalDate.now().toString();
+        LocalDate reportDate;
+        try {
+            reportDate = LocalDate.parse(req.getParameter("date"));
+        } catch (DateTimeParseException | NullPointerException exception) {
+            reportDate = LocalDate.now();
         }
+        String dateParam = reportDate.toString();
         double revenue = reportDAO.getTotalRevenueByDate(dateParam);
         Map<String, Integer> topProducts = reportDAO.getTopProducts(5);
         // Lấy doanh thu tháng hiện tại
@@ -40,6 +46,7 @@ public class ReportServlet extends HttpServlet {
         req.setAttribute("dailyRevenue", dailyRevenue);
         req.setAttribute("currentYear", now.getYear());
         req.setAttribute("currentMonth", now.getMonthValue());
+        req.setAttribute("chatHistory", chatHistoryDAO.findByDate(reportDate));
 
         req.getRequestDispatcher("/WEB-INF/views/admin/report.jsp").forward(req, resp);
     }

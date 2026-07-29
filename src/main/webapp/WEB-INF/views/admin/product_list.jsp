@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Quản lý sản phẩm - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
 </head>
 <body>
 <%@ include file="/WEB-INF/views/header.jsp" %>
@@ -41,8 +41,15 @@
                     <td>${p.stock}</td>
                     <td>${p.soldCount}</td>
                     <td>
-                        <a href="${pageContext.request.contextPath}/admin/products?action=edit&id=${p.id}">✏️ Sửa</a> |
-                        <a href="${pageContext.request.contextPath}/admin/products?action=delete&id=${p.id}" onclick="return confirm('Xóa sản phẩm này?')">🗑️ Xóa</a>
+                        <a href="${pageContext.request.contextPath}/admin/products?action=edit&id=${p.id}">✏️ Sửa</a>
+                        <form method="post" action="${pageContext.request.contextPath}/admin/products"
+                              class="inline-action"
+                              onsubmit="return confirm('Xóa sản phẩm này?');">
+                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="id" value="${p.id}">
+                            <button type="submit" class="link-button">🗑️ Xóa</button>
+                        </form>
                     </td>
                 </tr>
             </c:forEach>

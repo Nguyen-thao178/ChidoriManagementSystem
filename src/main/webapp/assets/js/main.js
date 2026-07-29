@@ -38,6 +38,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var chatInput = document.getElementById('chatInput');
     var chatBody = document.getElementById('chatBody');
     var chatTyping = document.getElementById('chatTyping');
+    var chatProviderStatus = document.getElementById('chatProviderStatus');
+    var chatCharacterCount = document.getElementById('chatCharacterCount');
+    var clearChat = document.getElementById('clearChat');
+    var initialChatMarkup = chatBody ? chatBody.innerHTML : '';
     var sendingMessage = false;
 
     function setChatOpen(open) {
@@ -59,8 +63,20 @@ document.addEventListener('DOMContentLoaded', function() {
     if (closeChat) {
         closeChat.addEventListener('click', function() { setChatOpen(false); });
     }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && chatWindow && chatWindow.classList.contains('is-open')) {
+            setChatOpen(false);
+        }
+    });
 
-    function addMessage(text, isUser) {
+    function currentTimeLabel() {
+        return new Intl.DateTimeFormat('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(new Date());
+    }
+
+    function addMessage(text, isUser, provider) {
         var msgDiv = document.createElement('div');
         msgDiv.className = 'chat-message ' + (isUser ? 'user-message' : 'bot-message');
 
@@ -71,10 +87,19 @@ document.addEventListener('DOMContentLoaded', function() {
             msgDiv.appendChild(avatar);
         }
 
+        var messageContent = document.createElement('div');
         var bubble = document.createElement('div');
         bubble.className = 'message-bubble';
         bubble.textContent = text;
-        msgDiv.appendChild(bubble);
+        messageContent.appendChild(bubble);
+
+        var meta = document.createElement('span');
+        meta.className = 'message-meta';
+        meta.textContent = isUser
+            ? 'Bạn · ' + currentTimeLabel()
+            : (provider === 'gemini' ? 'Gemini · ' : 'Chidori · ') + currentTimeLabel();
+        messageContent.appendChild(meta);
+        msgDiv.appendChild(messageContent);
         chatBody.appendChild(msgDiv);
         chatBody.scrollTop = chatBody.scrollHeight;
     }
@@ -84,6 +109,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sendBtn) sendBtn.disabled = sending;
         if (chatInput) chatInput.disabled = sending;
         if (chatTyping) chatTyping.hidden = !sending;
+        if (chatProviderStatus) {
+            chatProviderStatus.innerHTML = sending
+                ? '<i></i> Đang tìm câu trả lời…'
+                : '<i></i> Sẵn sàng hỗ trợ';
+        }
         if (sending && chatBody) chatBody.scrollTop = chatBody.scrollHeight;
     }
 
@@ -93,7 +123,8 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-CSRF-Token': window.CHIDORI_CSRF || ''
             },
             body: new URLSearchParams({message: message})
         })
@@ -102,13 +133,24 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(function(data) {
-            addMessage(data.message || 'Mình chưa thể trả lời lúc này.', false);
+            addMessage(data.message || 'Mình chưa thể trả lời lúc này.', false, data.provider);
+            if (chatProviderStatus) {
+                chatProviderStatus.innerHTML = data.provider === 'gemini'
+                    ? '<i></i> Gemini đang hoạt động'
+                    : '<i></i> Chế độ hỗ trợ nội bộ';
+            }
         })
         .catch(function() {
-            addMessage('Mình chưa kết nối được máy chủ. Bạn vui lòng thử lại sau nhé.', false);
+            addMessage('Mình chưa kết nối được máy chủ. Bạn vui lòng thử lại sau nhé.', false, 'local');
+            if (chatProviderStatus) {
+                chatProviderStatus.innerHTML = '<i class="is-error"></i> Mất kết nối';
+            }
         })
         .finally(function() {
-            setSending(false);
+            sendingMessage = false;
+            if (sendBtn) sendBtn.disabled = false;
+            if (chatInput) chatInput.disabled = false;
+            if (chatTyping) chatTyping.hidden = true;
             if (chatInput) chatInput.focus();
         });
     }
@@ -118,7 +160,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!msg || sendingMessage) return;
         addMessage(msg, true);
         chatInput.value = '';
-        document.querySelector('.chat-suggestions')?.remove();
+        chatInput.style.height = '';
+        if (chatCharacterCount) chatCharacterCount.textContent = '0/500';
+        document.getElementById('chatWelcome')?.remove();
+        document.getElementById('chatSuggestions')?.remove();
         sendToAI(msg);
     }
 
@@ -130,11 +175,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitChat();
             }
         });
+        chatInput.addEventListener('input', function() {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 96) + 'px';
+            if (chatCharacterCount) {
+                chatCharacterCount.textContent = chatInput.value.length + '/500';
+            }
+        });
         document.querySelectorAll('[data-chat-suggestion]').forEach(function(button) {
             button.addEventListener('click', function() {
                 setChatOpen(true);
                 submitChat(button.dataset.chatSuggestion);
             });
+        });
+    }
+    if (clearChat && chatBody) {
+        clearChat.addEventListener('click', function() {
+            if (sendingMessage) return;
+            chatBody.innerHTML = initialChatMarkup;
+            chatBody.scrollTop = 0;
+            chatBody.querySelectorAll('[data-chat-suggestion]').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    submitChat(button.dataset.chatSuggestion);
+                });
+            });
+            if (chatProviderStatus) {
+                chatProviderStatus.innerHTML = '<i></i> Sẵn sàng hỗ trợ';
+            }
+            if (chatInput) chatInput.focus();
         });
     }
 
@@ -191,3 +259,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+document.addEventListener('error', function (event) {
+    const image = event.target;
+    if (!(image instanceof HTMLImageElement) || image.dataset.fallbackApplied) return;
+    if (!image.closest('.product-card, .product-detail, .cart-table')) return;
+    image.dataset.fallbackApplied = 'true';
+    image.src = (window.contextPath || '') + '/assets/images/caphesua.jpeg';
+}, true);

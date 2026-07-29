@@ -2,6 +2,7 @@ package com.cafe.dao;
 
 import com.cafe.model.CartItem;
 import com.cafe.model.Order;
+import com.cafe.model.ReceiptItem;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -139,6 +140,42 @@ public class OrderDAO {
         return orders;
     }
 
+    public Order getOrderByIdAndUserId(int orderId, int userId) throws SQLException {
+        String sql = "SELECT * FROM orders WHERE id = ? AND user_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapOrder(rs) : null;
+            }
+        }
+    }
+
+    public List<ReceiptItem> getReceiptItems(int orderId, int userId) throws SQLException {
+        List<ReceiptItem> items = new ArrayList<>();
+        String sql = "SELECT p.name, oi.quantity, oi.price " +
+                "FROM order_items oi " +
+                "INNER JOIN orders o ON o.id = oi.order_id " +
+                "INNER JOIN products p ON p.id = oi.product_id " +
+                "WHERE oi.order_id = ? AND o.user_id = ? ORDER BY oi.id";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    items.add(new ReceiptItem(
+                            rs.getString("name"),
+                            rs.getInt("quantity"),
+                            rs.getDouble("price")
+                    ));
+                }
+            }
+        }
+        return items;
+    }
+
     public List<Order> getDepositOrdersByUserId(int userId) {
         List<Order> orders = new ArrayList<>();
         String sql = "SELECT * FROM orders WHERE user_id = ? AND order_type = 'deposit' " +
@@ -167,55 +204,6 @@ public class OrderDAO {
         } catch (SQLException e) {
             e.printStackTrace();
             return 0;
-        }
-    }
-
-    public boolean markDepositPickedUp(int orderId, int userId) throws SQLException {
-        Connection conn = null;
-        try {
-            conn = DBConnection.getConnection();
-            conn.setAutoCommit(false);
-
-            double total;
-            String lockSql = "SELECT total_amount FROM orders WITH (UPDLOCK, ROWLOCK) " +
-                    "WHERE id = ? AND user_id = ? AND order_type = 'deposit' AND status = 'deposit_pending'";
-            try (PreparedStatement ps = conn.prepareStatement(lockSql)) {
-                ps.setInt(1, orderId);
-                ps.setInt(2, userId);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (!rs.next()) {
-                        conn.rollback();
-                        return false;
-                    }
-                    total = rs.getDouble("total_amount");
-                }
-            }
-
-            String soldSql = "UPDATE p SET sold_count = sold_count + x.quantity " +
-                    "FROM products p INNER JOIN (" +
-                    "SELECT product_id, SUM(quantity) quantity FROM order_items WHERE order_id = ? GROUP BY product_id" +
-                    ") x ON x.product_id = p.id";
-            try (PreparedStatement ps = conn.prepareStatement(soldSql)) {
-                ps.setInt(1, orderId);
-                ps.executeUpdate();
-            }
-
-            String updateSql = "UPDATE orders SET status = 'picked_up', pickup_status = 'picked_up', " +
-                    "completed_at = SYSDATETIME() WHERE id = ?";
-            try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
-                ps.setInt(1, orderId);
-                ps.executeUpdate();
-            }
-            conn.commit();
-
-            LoyaltyDAO loyaltyDAO = new LoyaltyDAO();
-            loyaltyDAO.addPoints(userId, (int) (total / 1000), total);
-            return true;
-        } catch (SQLException e) {
-            if (conn != null) conn.rollback();
-            throw e;
-        } finally {
-            if (conn != null) conn.close();
         }
     }
 

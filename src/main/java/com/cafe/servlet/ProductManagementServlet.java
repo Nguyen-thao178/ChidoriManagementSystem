@@ -16,15 +16,23 @@ public class ProductManagementServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if (!isAdmin(req)) {
+        if (!canManageMenu(req)) {
             resp.sendRedirect(req.getContextPath() + "/home");
             return;
         }
         String action = req.getParameter("action");
         if ("edit".equals(action) || "create".equals(action)) {
             if ("edit".equals(action)) {
-                int id = Integer.parseInt(req.getParameter("id"));
+                Integer id = parsePositiveInt(req.getParameter("id"));
+                if (id == null) {
+                    resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID sản phẩm không hợp lệ.");
+                    return;
+                }
                 Product p = productDAO.getById(id);
+                if (p == null) {
+                    resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+                    return;
+                }
                 req.setAttribute("product", p);
             }
             req.getRequestDispatcher("/WEB-INF/views/admin/product_form.jsp").forward(req, resp);
@@ -37,24 +45,41 @@ public class ProductManagementServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
-        if (!isAdmin(req)) {
+        req.setCharacterEncoding("UTF-8");
+        if (!canManageMenu(req)) {
             resp.sendRedirect(req.getContextPath() + "/home");
             return;
         }
         String action = req.getParameter("action");
-        if ("delete".equals(action)) {
-            int id = Integer.parseInt(req.getParameter("id"));
-            productDAO.deleteProduct(id);
-        } else {
-            int id = req.getParameter("id") != null && !req.getParameter("id").isEmpty() ? Integer.parseInt(req.getParameter("id")) : 0;
-            String name = req.getParameter("name");
+        try {
+            if ("delete".equals(action)) {
+                Integer id = parsePositiveInt(req.getParameter("id"));
+                if (id == null) {
+                    resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID sản phẩm không hợp lệ.");
+                    return;
+                }
+                if (!productDAO.deleteProduct(id)) {
+                    resp.sendRedirect(req.getContextPath()
+                            + "/admin/products?error=Không thể xóa sản phẩm đã có giao dịch");
+                    return;
+                }
+                resp.sendRedirect(req.getContextPath() + "/admin/products?success=1");
+                return;
+            }
+
+            int id = req.getParameter("id") == null || req.getParameter("id").isBlank()
+                    ? 0 : requirePositiveInt(req.getParameter("id"));
+            String name = requireText(req.getParameter("name"), "Tên sản phẩm");
             double price = Double.parseDouble(req.getParameter("price"));
             String description = req.getParameter("description");
             int stock = Integer.parseInt(req.getParameter("stock"));
             int soldCount = Integer.parseInt(req.getParameter("soldCount"));
-            String imageUrl = req.getParameter("imageUrl");
-            String category = req.getParameter("category");
+            String imageUrl = requireText(req.getParameter("imageUrl"), "URL hình ảnh");
+            String category = requireText(req.getParameter("category"), "Danh mục");
             String barcode = BarcodeUtil.normalize(req.getParameter("barcode"));
+            if (price < 0 || stock < 0 || soldCount < 0) {
+                throw new IllegalArgumentException("Giá, tồn kho và số lượng bán không được âm.");
+            }
 
             Product p = new Product(id, name, price, description, stock, soldCount, imageUrl, category, barcode);
             if (barcode != null && !BarcodeUtil.isValidEan13(barcode)) {
@@ -77,8 +102,10 @@ public class ProductManagementServlet extends HttpServlet {
                 showProductForm(req, resp, p, "Không thể lưu sản phẩm. Vui lòng kiểm tra kết nối cơ sở dữ liệu.");
                 return;
             }
+            resp.sendRedirect(req.getContextPath() + "/admin/products?success=1");
+        } catch (IllegalArgumentException exception) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, exception.getMessage());
         }
-        resp.sendRedirect(req.getContextPath() + "/admin/products");
     }
 
     private void showProductForm(HttpServletRequest req, HttpServletResponse resp, Product product, String error)
@@ -88,8 +115,31 @@ public class ProductManagementServlet extends HttpServlet {
         req.getRequestDispatcher("/WEB-INF/views/admin/product_form.jsp").forward(req, resp);
     }
 
-    private boolean isAdmin(HttpServletRequest req) {
+    private boolean canManageMenu(HttpServletRequest req) {
         User user = (User) req.getSession().getAttribute("user");
-        return user != null && "admin".equals(user.getRole());
+        return user != null && ("admin".equalsIgnoreCase(user.getRole())
+                || "manager".equalsIgnoreCase(user.getRole()));
+    }
+
+    private Integer parsePositiveInt(String value) {
+        try {
+            int parsed = Integer.parseInt(value);
+            return parsed > 0 ? parsed : null;
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    private int requirePositiveInt(String value) {
+        Integer parsed = parsePositiveInt(value);
+        if (parsed == null) throw new IllegalArgumentException("ID sản phẩm không hợp lệ.");
+        return parsed;
+    }
+
+    private String requireText(String value, String field) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException(field + " không được để trống.");
+        }
+        return value.trim();
     }
 }

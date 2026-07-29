@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Giỏ hàng - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
 </head>
 <body>
 <%@ include file="header.jsp" %>
@@ -28,6 +28,7 @@
             <p>Giữ con trỏ trong ô bên dưới, sau đó quét bằng máy đọc mã vạch. Mỗi lần quét sẽ thêm một sản phẩm.</p>
         </div>
         <form id="barcodeForm" action="${pageContext.request.contextPath}/cart/scan" method="post">
+            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
             <label for="barcodeInput" class="sr-only">Mã vạch sản phẩm</label>
             <input type="text" id="barcodeInput" name="barcode" maxlength="16" inputmode="numeric"
                    autocomplete="off" autocapitalize="off" spellcheck="false"
@@ -50,13 +51,21 @@
                         <td><fmt:formatNumber value="${item.discountedPrice}" type="number"/>₫</td>
                         <td>
                             <form action="${pageContext.request.contextPath}/update-cart" method="post" style="display:inline;">
+                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                 <input type="hidden" name="id" value="${item.product.id}">
                                 <input type="number" name="quantity" value="${item.quantity}" min="1" max="${item.product.stock}" style="width:70px;">
                                 <button type="submit" class="btn-outline" style="padding:0.2rem 0.5rem;">Cập nhật</button>
                             </form>
                          </td>
                         <td><fmt:formatNumber value="${item.discountedPrice * item.quantity}" type="number"/>₫</td>
-                        <td><a href="${pageContext.request.contextPath}/remove-cart?id=${item.product.id}" class="remove-btn">❌ Xóa</a></td>
+                        <td>
+                            <form action="${pageContext.request.contextPath}/remove-cart" method="post"
+                                  class="inline-action">
+                                <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                                <input type="hidden" name="id" value="${item.product.id}">
+                                <button type="submit" class="remove-btn link-button">❌ Xóa</button>
+                            </form>
+                        </td>
                         <c:set var="total" value="${total + item.discountedPrice * item.quantity}" />
                     </tr>
                 </c:forEach>

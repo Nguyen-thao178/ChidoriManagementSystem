@@ -47,12 +47,17 @@ public class SystemSettingsDAO {
         return null;
     }
 
-    public boolean updateSetting(String key, String value) {
-        String sql = "UPDATE system_settings SET setting_value = ? WHERE setting_key = ?";
+    public boolean updateSetting(String key, String value, int updatedByUserId) {
+        String sql = """
+                UPDATE system_settings
+                SET setting_value = ?, updated_by_user_id = ?
+                WHERE setting_key = ?
+                """;
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, value);
-            ps.setString(2, key);
+            ps.setInt(2, updatedByUserId);
+            ps.setString(3, key);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();

@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chidori Coffee - Trang chủ</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
 </head>
 <body>
 <%@ include file="header.jsp" %>
@@ -37,7 +37,11 @@
                             <fmt:formatNumber value="${p.price * (100 - maxDiscount) / 100}" type="number"/>₫
                         </p>
                         <p>📦 Đã bán: ${p.soldCount} | 📊 Còn: ${p.stock}</p>
-                        <a href="${pageContext.request.contextPath}/add-to-cart?id=${p.id}" class="btn btn-add-cart">➕ Thêm giỏ</a>
+                        <form action="${pageContext.request.contextPath}/add-to-cart" method="post" class="inline-action">
+                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                            <input type="hidden" name="id" value="${p.id}">
+                            <button type="submit" class="btn btn-add-cart">➕ Thêm giỏ</button>
+                        </form>
                         <a href="${pageContext.request.contextPath}/product?id=${p.id}" class="btn-outline">🔍 Chi tiết</a>
                     </div>
                 </div>

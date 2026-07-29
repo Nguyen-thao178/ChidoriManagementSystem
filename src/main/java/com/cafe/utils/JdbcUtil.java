@@ -1,5 +1,6 @@
 package com.cafe.utils;
 
+import com.cafe.config.DatabaseConfig;
 import java.sql.*;
 
 /**
@@ -10,9 +11,6 @@ public class JdbcUtil {
 
     // Thông tin kết nối CSDL
 	private static final String DRIVER = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
-    private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=CafeDB;encrypt=true;trustServerCertificate=true;";
-    private static final String USERNAME = "sa";
-    private static final String PASSWORD = "12345";
 
     // Đối tượng kết nối (Singleton pattern)
     private static Connection connection = null;
@@ -35,7 +33,11 @@ public class JdbcUtil {
      */
     public static Connection getConnection() throws SQLException {
         if (connection == null || connection.isClosed()) {
-            connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+            if (DatabaseConfig.PASSWORD.isBlank()) {
+                throw new SQLException("CAFE_DB_PASSWORD chưa được cấu hình.");
+            }
+            connection = DriverManager.getConnection(
+                    DatabaseConfig.URL, DatabaseConfig.USER, DatabaseConfig.PASSWORD);
         }
         return connection;
     }

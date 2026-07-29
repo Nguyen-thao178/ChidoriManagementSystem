@@ -4,7 +4,7 @@ import com.cafe.dao.LoyaltyDAO;
 import com.cafe.dao.UserDAO;
 import com.cafe.model.User;
 import com.cafe.oauth.OAuthConstants;
-import com.cafe.utils.HashUtil;
+import com.cafe.utils.PasswordUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.security.MessageDigest;
 
 @WebServlet("/oauth-callback")
 public class OAuthCallbackServlet extends HttpServlet {
@@ -35,8 +36,13 @@ public class OAuthCallbackServlet extends HttpServlet {
             throws IOException, ServletException {
         String provider = req.getParameter("provider");
         String code = req.getParameter("code");
+        String state = req.getParameter("state");
+        Object expectedState = req.getSession().getAttribute("oauthState");
+        req.getSession().removeAttribute("oauthState");
 
-        if (code == null) {
+        if (code == null || state == null || !(expectedState instanceof String)
+                || !MessageDigest.isEqual(state.getBytes(StandardCharsets.UTF_8),
+                expectedState.toString().getBytes(StandardCharsets.UTF_8))) {
             resp.sendRedirect(req.getContextPath() + "/login?error=oauth_failed");
             return;
         }
@@ -75,7 +81,7 @@ public class OAuthCallbackServlet extends HttpServlet {
 
                 // Tạo mật khẩu ngẫu nhiên và hash
                 String randomPassword = UUID.randomUUID().toString();
-                newUser.setPasswordHash(HashUtil.sha256(randomPassword));
+                newUser.setPasswordHash(PasswordUtil.hash(randomPassword));
 
                 // Lưu vào database
                 int userId = userDAO.insert(newUser);
@@ -92,6 +98,8 @@ public class OAuthCallbackServlet extends HttpServlet {
             }
 
             // 4. Lưu user vào session và chuyển hướng
+            req.getSession();
+            req.changeSessionId();
             req.getSession().setAttribute("user", existing);
             resp.sendRedirect(req.getContextPath() + "/home");
 

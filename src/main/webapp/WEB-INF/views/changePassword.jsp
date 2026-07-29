@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đổi mật khẩu - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
     <style>
         .change-password-container {
             max-width: 500px;
@@ -124,6 +124,7 @@
     </c:if>
 
     <form action="${pageContext.request.contextPath}/change-password" method="post">
+        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
         <div class="form-group">
             <label for="oldPassword">Mật khẩu cũ</label>
             <div class="input-group">

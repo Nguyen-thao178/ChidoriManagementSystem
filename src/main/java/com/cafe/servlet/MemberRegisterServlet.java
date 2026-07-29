@@ -2,7 +2,7 @@ package com.cafe.servlet;
 
 import com.cafe.dao.UserDAO;
 import com.cafe.model.User;
-import com.cafe.utils.HashUtil;
+import com.cafe.utils.PasswordUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
@@ -33,8 +33,8 @@ public class MemberRegisterServlet extends HttpServlet {
             req.getRequestDispatcher("/WEB-INF/views/register_member.jsp").forward(req, resp);
             return;
         }
-        if (password == null || password.length() < 6) {
-            req.setAttribute("error", "Mật khẩu phải có ít nhất 6 ký tự.");
+        if (password == null || password.length() < 8) {
+            req.setAttribute("error", "Mật khẩu phải có ít nhất 8 ký tự.");
             req.getRequestDispatcher("/WEB-INF/views/register_member.jsp").forward(req, resp);
             return;
         }
@@ -67,7 +67,7 @@ public class MemberRegisterServlet extends HttpServlet {
             // Tạo đối tượng User
             User user = new User();
             user.setUsername(username);
-            user.setPasswordHash(HashUtil.sha256(password)); // Mã hóa mật khẩu
+            user.setPasswordHash(PasswordUtil.hash(password));
             user.setFullname(fullname);
             user.setEmail(email);
             user.setRole("customer"); // Mặc định là khách hàng

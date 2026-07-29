@@ -50,6 +50,7 @@
 
         <form class="login-reference-form"
               action="${pageContext.request.contextPath}/login" method="post">
+            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
             <label class="sr-only" for="username">Tên đăng nhập</label>
             <div class="login-reference-input">
                 <span class="login-field-icon" aria-hidden="true">✦</span>

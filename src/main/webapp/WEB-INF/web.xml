@@ -10,6 +10,14 @@
         <welcome-file>index.jsp</welcome-file>
     </welcome-file-list>
 
+    <session-config>
+        <session-timeout>30</session-timeout>
+        <cookie-config>
+            <http-only>true</http-only>
+        </cookie-config>
+        <tracking-mode>COOKIE</tracking-mode>
+    </session-config>
+
     <!-- Filter bảo vệ tất cả URL ngoại trừ các đường dẫn công khai (được xử lý trong filter) -->
     <filter>
         <filter-name>AuthFilter</filter-name>

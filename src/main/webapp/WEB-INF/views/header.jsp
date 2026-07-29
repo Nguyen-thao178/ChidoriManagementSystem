@@ -1,6 +1,9 @@
 <%@ page pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<script>window.contextPath = "${pageContext.request.contextPath}";</script>
+<script>
+    window.contextPath = "${pageContext.request.contextPath}";
+    window.CHIDORI_CSRF = "${sessionScope.csrfToken}";
+</script>
 <header>
     <div class="top-bar">
         <div class="logo">
@@ -26,7 +29,10 @@
                         (${sessionScope.cart.size()})
                     </c:if>
                 </a>
-                <a href="${pageContext.request.contextPath}/logout">🚪 Đăng xuất</a>
+                <form action="${pageContext.request.contextPath}/logout" method="post" class="inline-action">
+                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                    <button type="submit" class="link-button">🚪 Đăng xuất</button>
+                </form>
             </c:if>
         </div>
     </div>
@@ -43,8 +49,10 @@
             <a href="${pageContext.request.contextPath}/admin/settings">⚙️ Cài đặt</a>
             <a href="${pageContext.request.contextPath}/register-member">➕ Đăng ký thành viên</a>
         </c:if>
-        <!-- Chỉ manager/admin mới thấy báo cáo -->
+        <!-- Manager quản lý nhân viên cấp dưới, menu và báo cáo. -->
         <c:if test="${sessionScope.user.role == 'manager'}">
+            <a href="${pageContext.request.contextPath}/admin/users">👥 Quản lý nhân viên</a>
+            <a href="${pageContext.request.contextPath}/admin/products">📦 Quản lý menu</a>
             <a href="${pageContext.request.contextPath}/admin/report">📊 Báo cáo</a>
         </c:if>
     </nav>

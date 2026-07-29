@@ -12,6 +12,12 @@ public class AddToCartServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+                "Vui lòng thêm sản phẩm bằng biểu mẫu bảo mật.");
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String idStr = req.getParameter("id");
         if (idStr == null) {
             resp.sendRedirect(req.getContextPath() + "/menu");

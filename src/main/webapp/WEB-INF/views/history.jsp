@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lịch sử giao dịch - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
 </head>
 <body>
 <%@ include file="header.jsp" %>
@@ -39,6 +39,7 @@
                         <th>Đã cọc</th>
                         <th>Thanh toán</th>
                         <th>Loại giao dịch</th>
+                        <th>Hóa đơn</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -79,6 +80,12 @@
                                         <span class="order-tag tag-deposit-pending">Đã cọc - Chờ nhận hàng</span>
                                     </c:otherwise>
                                 </c:choose>
+                            </td>
+                            <td>
+                                <a class="btn-outline"
+                                   href="${pageContext.request.contextPath}/receipt?orderId=${order.id}">
+                                    🖨 In
+                                </a>
                             </td>
                         </tr>
                     </c:forEach>

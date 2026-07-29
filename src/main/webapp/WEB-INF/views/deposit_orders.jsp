@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đơn Hàng Cọc - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
 </head>
 <body>
 <%@ include file="header.jsp" %>
@@ -90,10 +90,29 @@
                             </div>
                             <p class="deposit-method"><span>Hình thức cọc</span><strong>${order.paymentMethod == 'vnpay' ? 'VNPay' : 'Tiền mặt'}</strong></p>
 
+                            <a class="btn-outline deposit-print-link"
+                               href="${pageContext.request.contextPath}/receipt?orderId=${order.id}">
+                                🖨 In phiếu cọc
+                            </a>
+
                             <c:if test="${order.status == 'deposit_pending'}">
                                 <form action="${pageContext.request.contextPath}/deposit-orders" method="post"
                                       onsubmit="return confirm('Xác nhận khách đã nhận hàng và thanh toán phần còn lại?');">
+                                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                                     <input type="hidden" name="orderId" value="${order.id}">
+                                    <fieldset class="balance-payment-method">
+                                        <legend>Thanh toán phần còn lại</legend>
+                                        <label>
+                                            <input type="radio" name="balancePaymentMethod"
+                                                   value="cash" checked>
+                                            Tiền mặt
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="balancePaymentMethod"
+                                                   value="vnpay">
+                                            VNPay
+                                        </label>
+                                    </fieldset>
                                     <button type="submit" class="btn-primary">✓ Xác nhận đã nhận hàng</button>
                                 </form>
                             </c:if>

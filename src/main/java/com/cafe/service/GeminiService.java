@@ -17,7 +17,7 @@ import java.time.Duration;
  * are never stored in the application source or session.
  */
 public class GeminiService {
-    private static final String DEFAULT_MODEL = "gemini-3.6-flash";
+    private static final String DEFAULT_MODEL = "gemini-2.5-flash";
     private static final String API_ENDPOINT =
             "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
 
@@ -31,7 +31,7 @@ public class GeminiService {
         this.client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(8))
                 .build();
-        this.apiKey = firstConfiguredValue("GEMINI_API_KEY");
+        this.apiKey = firstConfiguredValue("GEMINI_API_KEY", "GOOGLE_API_KEY");
         String configuredModel = firstConfiguredValue("GEMINI_MODEL");
         this.model = configuredModel == null || !configuredModel.matches("[A-Za-z0-9._-]+")
                 ? DEFAULT_MODEL
@@ -123,11 +123,16 @@ public class GeminiService {
         return result.toString();
     }
 
-    private static String firstConfiguredValue(String name) {
-        String value = System.getenv(name);
-        if (value == null || value.isBlank()) {
-            value = System.getProperty(name);
+    private static String firstConfiguredValue(String... names) {
+        for (String name : names) {
+            String value = System.getenv(name);
+            if (value == null || value.isBlank()) {
+                value = System.getProperty(name);
+            }
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
         }
-        return value == null || value.isBlank() ? null : value.trim();
+        return null;
     }
 }

@@ -1,9 +1,11 @@
 package com.cafe.servlet;
 
+import com.cafe.dao.ChatHistoryDAO;
 import com.cafe.dao.ProductDAO;
 import com.cafe.dao.PromotionDAO;
 import com.cafe.model.Product;
 import com.cafe.model.Promotion;
+import com.cafe.model.User;
 import com.cafe.service.GeminiService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.annotation.WebServlet;
@@ -29,6 +31,7 @@ public class ChatServlet extends HttpServlet {
     private final GeminiService geminiService = new GeminiService();
     private final ProductDAO productDAO = new ProductDAO();
     private final PromotionDAO promotionDAO = new PromotionDAO();
+    private final ChatHistoryDAO chatHistoryDAO = new ChatHistoryDAO();
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -61,6 +64,14 @@ public class ChatServlet extends HttpServlet {
             }
         } else {
             reply = localReply(message);
+        }
+        User user = (User) req.getSession().getAttribute("user");
+        if (user != null) {
+            try {
+                chatHistoryDAO.save(user.getId(), message, reply, provider);
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Could not save chat history", e);
+            }
         }
         writeJson(resp, true, reply, provider);
     }

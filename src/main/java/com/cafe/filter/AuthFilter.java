@@ -1,6 +1,7 @@
 package com.cafe.filter;
 
 import com.cafe.model.User;
+import com.cafe.utils.CsrfUtil;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -22,17 +23,34 @@ public class AuthFilter implements Filter {
         HttpServletResponse resp = (HttpServletResponse) response;
         String uri = req.getRequestURI();
         String contextPath = req.getContextPath();
+        resp.setHeader("X-Content-Type-Options", "nosniff");
+        resp.setHeader("X-Frame-Options", "DENY");
+        resp.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
 
-        // Các URL công khai
+        boolean isAsset = uri.startsWith(contextPath + "/assets");
+        if (!isAsset) {
+            CsrfUtil.ensureToken(req.getSession());
+        }
+
         boolean isPublic = uri.startsWith(contextPath + "/login")
-                || uri.startsWith(contextPath + "/assets")
+                || isAsset
                 || uri.startsWith(contextPath + "/register-member")
                 || uri.startsWith(contextPath + "/oauth-login")
                 || uri.startsWith(contextPath + "/oauth-callback")
-                || uri.startsWith(contextPath + "/vnpay-pay")
                 || uri.startsWith(contextPath + "/vnpay-return")
+                || uri.startsWith(contextPath + "/vnpay-ipn")
                 || uri.equals(contextPath + "/")
                 || uri.equals(contextPath + "/index.jsp");
+
+        boolean trustedCallback = uri.startsWith(contextPath + "/oauth-callback")
+                || uri.startsWith(contextPath + "/vnpay-return")
+                || uri.startsWith(contextPath + "/vnpay-ipn");
+        if ("POST".equalsIgnoreCase(req.getMethod()) && !trustedCallback
+                && !CsrfUtil.isValid(req)) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Yêu cầu đã hết hạn hoặc thiếu CSRF token.");
+            return;
+        }
 
         if (isPublic) {
             chain.doFilter(req, resp);
@@ -42,17 +60,19 @@ public class AuthFilter implements Filter {
         HttpSession session = req.getSession(false);
         User user = (session != null) ? (User) session.getAttribute("user") : null;
 
-        // Log để debug (có thể xóa sau)
-        System.out.println("[AuthFilter] URI: " + uri + ", User: " + user);
-
         if (user == null) {
             resp.sendRedirect(contextPath + "/login");
             return;
         }
 
-        // Kiểm tra role Admin
         if (uri.startsWith(contextPath + "/admin")) {
-            if (!"admin".equalsIgnoreCase(user.getRole())) {
+            boolean report = uri.startsWith(contextPath + "/admin/report");
+            boolean users = uri.startsWith(contextPath + "/admin/users");
+            boolean products = uri.startsWith(contextPath + "/admin/products");
+            boolean managerArea = report || users || products;
+            boolean allowed = "admin".equalsIgnoreCase(user.getRole())
+                    || (managerArea && "manager".equalsIgnoreCase(user.getRole()));
+            if (!allowed) {
                 resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập trang quản trị.");
                 return;
             }
