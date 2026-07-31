@@ -18,35 +18,35 @@ SET NOCOUNT ON;
 SET XACT_ABORT ON;
 GO
 
-CREATE TABLE dbo.users (
+CREATE TABLE dbo.Users (
     id            INT IDENTITY(1,1) PRIMARY KEY,
     username      VARCHAR(50) NOT NULL,
     password_hash CHAR(64) NOT NULL,
     fullname      NVARCHAR(120) NOT NULL,
     email         VARCHAR(254) NOT NULL,
-    role          VARCHAR(20) NOT NULL CONSTRAINT DF_users_role DEFAULT 'member',
-    created_at    DATETIME2 NOT NULL CONSTRAINT DF_users_created_at DEFAULT SYSDATETIME(),
-    CONSTRAINT UX_users_username UNIQUE (username),
-    CONSTRAINT UX_users_email UNIQUE (email),
-    CONSTRAINT CK_users_role CHECK (role IN ('admin', 'member', 'staff'))
+    role          VARCHAR(20) NOT NULL CONSTRAINT DF_Users_role DEFAULT 'member',
+    created_at    DATETIME2 NOT NULL CONSTRAINT DF_Users_created_at DEFAULT SYSDATETIME(),
+    CONSTRAINT UX_Users_username UNIQUE (username),
+    CONSTRAINT UX_Users_email UNIQUE (email),
+    CONSTRAINT CK_Users_role CHECK (role IN ('admin', 'member', 'staff'))
 );
 
-CREATE TABLE dbo.products (
+CREATE TABLE dbo.Products (
     id          INT IDENTITY(1,1) PRIMARY KEY,
     name        NVARCHAR(150) NOT NULL,
     price       DECIMAL(18,2) NOT NULL,
     description NVARCHAR(1000) NULL,
-    stock       INT NOT NULL CONSTRAINT DF_products_stock DEFAULT 0,
-    sold_count  INT NOT NULL CONSTRAINT DF_products_sold_count DEFAULT 0,
+    stock       INT NOT NULL CONSTRAINT DF_Products_stock DEFAULT 0,
+    sold_count  INT NOT NULL CONSTRAINT DF_Products_sold_count DEFAULT 0,
     image_url   NVARCHAR(1000) NULL,
     category    NVARCHAR(80) NOT NULL,
     barcode     VARCHAR(64) NULL,
-    created_at  DATETIME2 NOT NULL CONSTRAINT DF_products_created_at DEFAULT SYSDATETIME(),
-    updated_at  DATETIME2 NOT NULL CONSTRAINT DF_products_updated_at DEFAULT SYSDATETIME(),
-    CONSTRAINT CK_products_price CHECK (price >= 0),
-    CONSTRAINT CK_products_stock CHECK (stock >= 0),
-    CONSTRAINT CK_products_sold_count CHECK (sold_count >= 0),
-    CONSTRAINT CK_products_barcode CHECK (
+    created_at  DATETIME2 NOT NULL CONSTRAINT DF_Products_created_at DEFAULT SYSDATETIME(),
+    updated_at  DATETIME2 NOT NULL CONSTRAINT DF_Products_updated_at DEFAULT SYSDATETIME(),
+    CONSTRAINT CK_Products_price CHECK (price >= 0),
+    CONSTRAINT CK_Products_stock CHECK (stock >= 0),
+    CONSTRAINT CK_Products_sold_count CHECK (sold_count >= 0),
+    CONSTRAINT CK_Products_barcode CHECK (
         barcode IS NULL OR (
             LEN(barcode) = 13
             AND barcode NOT LIKE '%[^0-9]%'
@@ -54,11 +54,11 @@ CREATE TABLE dbo.products (
     )
 );
 
-CREATE UNIQUE INDEX UX_products_barcode
-    ON dbo.products(barcode)
+CREATE UNIQUE INDEX UX_Products_barcode
+    ON dbo.Products(barcode)
     WHERE barcode IS NOT NULL;
 
-CREATE TABLE dbo.promotions (
+CREATE TABLE dbo.Promotions (
     id               INT IDENTITY(1,1) PRIMARY KEY,
     created_by_user_id INT NULL,
     title            NVARCHAR(150) NOT NULL,
@@ -67,96 +67,96 @@ CREATE TABLE dbo.promotions (
     start_date       DATE NOT NULL,
     end_date         DATE NOT NULL,
     image_url        NVARCHAR(1000) NULL,
-    status           VARCHAR(20) NOT NULL CONSTRAINT DF_promotions_status DEFAULT 'active',
-    CONSTRAINT FK_promotions_created_by
-        FOREIGN KEY (created_by_user_id) REFERENCES dbo.users(id),
-    CONSTRAINT CK_promotions_discount CHECK (discount_percent BETWEEN 0 AND 100),
-    CONSTRAINT CK_promotions_dates CHECK (end_date >= start_date),
-    CONSTRAINT CK_promotions_status CHECK (status IN ('active', 'inactive'))
+    status           VARCHAR(20) NOT NULL CONSTRAINT DF_Promotions_status DEFAULT 'active',
+    CONSTRAINT FK_Promotions_created_by
+        FOREIGN KEY (created_by_user_id) REFERENCES dbo.Users(id),
+    CONSTRAINT CK_Promotions_discount CHECK (discount_percent BETWEEN 0 AND 100),
+    CONSTRAINT CK_Promotions_dates CHECK (end_date >= start_date),
+    CONSTRAINT CK_Promotions_status CHECK (status IN ('active', 'inactive'))
 );
 
-CREATE TABLE dbo.promotion_items (
+CREATE TABLE dbo.Promotion_items (
     id               INT IDENTITY(1,1) PRIMARY KEY,
-    promotion_id     INT NOT NULL,
+    Promotion_id     INT NOT NULL,
     product_id       INT NOT NULL,
     discount_percent INT NOT NULL,
     start_date       DATE NOT NULL,
     end_date         DATE NOT NULL,
-    status           VARCHAR(20) NOT NULL CONSTRAINT DF_promotion_items_status DEFAULT 'active',
-    CONSTRAINT FK_promotion_items_promotion
-        FOREIGN KEY (promotion_id) REFERENCES dbo.promotions(id) ON DELETE CASCADE,
-    CONSTRAINT FK_promotion_items_product
-        FOREIGN KEY (product_id) REFERENCES dbo.products(id) ON DELETE CASCADE,
-    CONSTRAINT CK_promotion_items_discount CHECK (discount_percent BETWEEN 0 AND 100),
-    CONSTRAINT CK_promotion_items_dates CHECK (end_date >= start_date),
-    CONSTRAINT CK_promotion_items_status CHECK (status IN ('active', 'inactive'))
+    status           VARCHAR(20) NOT NULL CONSTRAINT DF_Promotion_items_status DEFAULT 'active',
+    CONSTRAINT FK_Promotion_items_Promotion
+        FOREIGN KEY (Promotion_id) REFERENCES dbo.Promotions(id) ON DELETE CASCADE,
+    CONSTRAINT FK_Promotion_items_product
+        FOREIGN KEY (product_id) REFERENCES dbo.Products(id) ON DELETE CASCADE,
+    CONSTRAINT CK_Promotion_items_discount CHECK (discount_percent BETWEEN 0 AND 100),
+    CONSTRAINT CK_Promotion_items_dates CHECK (end_date >= start_date),
+    CONSTRAINT CK_Promotion_items_status CHECK (status IN ('active', 'inactive'))
 );
 
-CREATE TABLE dbo.orders (
+CREATE TABLE dbo.Orders (
     id           INT IDENTITY(1,1) PRIMARY KEY,
     user_id      INT NOT NULL,
-    order_date   DATETIME2 NOT NULL CONSTRAINT DF_orders_order_date DEFAULT SYSDATETIME(),
+    order_date   DATETIME2 NOT NULL CONSTRAINT DF_Orders_order_date DEFAULT SYSDATETIME(),
     total_amount DECIMAL(18,2) NOT NULL,
-    status       VARCHAR(30) NOT NULL CONSTRAINT DF_orders_status DEFAULT 'pending',
-    order_type VARCHAR(20) NOT NULL CONSTRAINT DF_orders_order_type DEFAULT 'direct',
-    payment_method VARCHAR(20) NOT NULL CONSTRAINT DF_orders_payment_method DEFAULT 'cash',
-    deposit_amount DECIMAL(18,2) NOT NULL CONSTRAINT DF_orders_deposit_amount DEFAULT 0,
+    status       VARCHAR(30) NOT NULL CONSTRAINT DF_Orders_status DEFAULT 'pending',
+    order_type VARCHAR(20) NOT NULL CONSTRAINT DF_Orders_order_type DEFAULT 'direct',
+    payment_method VARCHAR(20) NOT NULL CONSTRAINT DF_Orders_payment_method DEFAULT 'cash',
+    deposit_amount DECIMAL(18,2) NOT NULL CONSTRAINT DF_Orders_deposit_amount DEFAULT 0,
     pickup_date DATE NULL,
     pickup_status VARCHAR(20) NULL,
     completed_at DATETIME2 NULL,
     cancelled_at DATETIME2 NULL,
     cancellation_reason NVARCHAR(300) NULL,
-    CONSTRAINT FK_orders_user FOREIGN KEY (user_id) REFERENCES dbo.users(id),
-    CONSTRAINT CK_orders_total CHECK (total_amount >= 0),
-    CONSTRAINT CK_orders_status CHECK (
+    CONSTRAINT FK_Orders_user FOREIGN KEY (user_id) REFERENCES dbo.Users(id),
+    CONSTRAINT CK_Orders_total CHECK (total_amount >= 0),
+    CONSTRAINT CK_Orders_status CHECK (
         status IN ('pending', 'completed', 'deposit_pending', 'picked_up', 'no_show', 'cancelled', 'refunded')
     ),
-    CONSTRAINT CK_orders_type CHECK (order_type IN ('direct', 'deposit')),
-    CONSTRAINT CK_orders_payment_method CHECK (payment_method IN ('cash', 'vnpay')),
-    CONSTRAINT CK_orders_deposit_amount CHECK (deposit_amount >= 0 AND deposit_amount <= total_amount),
-    CONSTRAINT CK_orders_pickup_status CHECK (
+    CONSTRAINT CK_Orders_type CHECK (order_type IN ('direct', 'deposit')),
+    CONSTRAINT CK_Orders_payment_method CHECK (payment_method IN ('cash', 'vnpay')),
+    CONSTRAINT CK_Orders_deposit_amount CHECK (deposit_amount >= 0 AND deposit_amount <= total_amount),
+    CONSTRAINT CK_Orders_pickup_status CHECK (
         pickup_status IS NULL OR pickup_status IN ('pending', 'picked_up', 'no_show')
     ),
-    CONSTRAINT CK_orders_deposit_fields CHECK (
+    CONSTRAINT CK_Orders_deposit_fields CHECK (
         (order_type = 'direct' AND pickup_date IS NULL AND deposit_amount = 0)
         OR
         (order_type = 'deposit' AND pickup_date IS NOT NULL AND deposit_amount > 0)
     )
 );
 
-CREATE TABLE dbo.order_items (
+CREATE TABLE dbo.Order_items (
     id         INT IDENTITY(1,1) PRIMARY KEY,
     order_id   INT NOT NULL,
     product_id INT NOT NULL,
     quantity   INT NOT NULL,
     price      DECIMAL(18,2) NOT NULL,
-    CONSTRAINT FK_order_items_order
-        FOREIGN KEY (order_id) REFERENCES dbo.orders(id) ON DELETE CASCADE,
-    CONSTRAINT FK_order_items_product FOREIGN KEY (product_id) REFERENCES dbo.products(id),
-    CONSTRAINT CK_order_items_quantity CHECK (quantity > 0),
-    CONSTRAINT CK_order_items_price CHECK (price >= 0)
+    CONSTRAINT FK_Order_items_order
+        FOREIGN KEY (order_id) REFERENCES dbo.Orders(id) ON DELETE CASCADE,
+    CONSTRAINT FK_Order_items_product FOREIGN KEY (product_id) REFERENCES dbo.Products(id),
+    CONSTRAINT CK_Order_items_quantity CHECK (quantity > 0),
+    CONSTRAINT CK_Order_items_price CHECK (price >= 0)
 );
 
-CREATE TABLE dbo.payments (
+CREATE TABLE dbo.Payments (
     id                    BIGINT IDENTITY(1,1) PRIMARY KEY,
     order_id              INT NOT NULL,
     payment_stage         VARCHAR(20) NOT NULL,
     payment_method        VARCHAR(20) NOT NULL,
     amount                DECIMAL(18,2) NOT NULL,
-    status                VARCHAR(20) NOT NULL CONSTRAINT DF_payments_status DEFAULT 'paid',
+    status                VARCHAR(20) NOT NULL CONSTRAINT DF_Payments_status DEFAULT 'paid',
     transaction_reference VARCHAR(150) NULL,
     paid_at               DATETIME2 NULL,
-    created_at            DATETIME2 NOT NULL CONSTRAINT DF_payments_created_at DEFAULT SYSDATETIME(),
-    CONSTRAINT FK_payments_order
-        FOREIGN KEY (order_id) REFERENCES dbo.orders(id) ON DELETE CASCADE,
-    CONSTRAINT CK_payments_stage
+    created_at            DATETIME2 NOT NULL CONSTRAINT DF_Payments_created_at DEFAULT SYSDATETIME(),
+    CONSTRAINT FK_Payments_order
+        FOREIGN KEY (order_id) REFERENCES dbo.Orders(id) ON DELETE CASCADE,
+    CONSTRAINT CK_Payments_stage
         CHECK (payment_stage IN ('full', 'deposit', 'balance', 'refund')),
-    CONSTRAINT CK_payments_method CHECK (payment_method IN ('cash', 'vnpay')),
-    CONSTRAINT CK_payments_amount CHECK (amount >= 0),
-    CONSTRAINT CK_payments_status CHECK (status IN ('pending', 'paid', 'failed', 'refunded'))
+    CONSTRAINT CK_Payments_method CHECK (payment_method IN ('cash', 'vnpay')),
+    CONSTRAINT CK_Payments_amount CHECK (amount >= 0),
+    CONSTRAINT CK_Payments_status CHECK (status IN ('pending', 'paid', 'failed', 'refunded'))
 );
 
-CREATE TABLE dbo.order_status_history (
+CREATE TABLE dbo.Order_status_history (
     id            BIGINT IDENTITY(1,1) PRIMARY KEY,
     order_id      INT NOT NULL,
     old_status    VARCHAR(30) NULL,
@@ -165,25 +165,25 @@ CREATE TABLE dbo.order_status_history (
     changed_at    DATETIME2 NOT NULL CONSTRAINT DF_order_history_changed_at DEFAULT SYSDATETIME(),
     changed_by_id INT NULL,
     CONSTRAINT FK_order_history_order
-        FOREIGN KEY (order_id) REFERENCES dbo.orders(id) ON DELETE CASCADE,
+        FOREIGN KEY (order_id) REFERENCES dbo.Orders(id) ON DELETE CASCADE,
     CONSTRAINT FK_order_history_user
-        FOREIGN KEY (changed_by_id) REFERENCES dbo.users(id)
+        FOREIGN KEY (changed_by_id) REFERENCES dbo.Users(id)
 );
 
-CREATE TABLE dbo.loyalty_points (
+CREATE TABLE dbo.Loyalty_points (
     id          INT IDENTITY(1,1) PRIMARY KEY,
     user_id     INT NOT NULL,
-    points      INT NOT NULL CONSTRAINT DF_loyalty_points_points DEFAULT 0,
-    total_spent DECIMAL(18,2) NOT NULL CONSTRAINT DF_loyalty_points_spent DEFAULT 0,
-    updated_at  DATETIME2 NOT NULL CONSTRAINT DF_loyalty_points_updated DEFAULT SYSDATETIME(),
-    CONSTRAINT UX_loyalty_points_user UNIQUE (user_id),
-    CONSTRAINT FK_loyalty_points_user
-        FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE CASCADE,
-    CONSTRAINT CK_loyalty_points_points CHECK (points >= 0),
-    CONSTRAINT CK_loyalty_points_spent CHECK (total_spent >= 0)
+    points      INT NOT NULL CONSTRAINT DF_Loyalty_points_points DEFAULT 0,
+    total_spent DECIMAL(18,2) NOT NULL CONSTRAINT DF_Loyalty_points_spent DEFAULT 0,
+    updated_at  DATETIME2 NOT NULL CONSTRAINT DF_Loyalty_points_updated DEFAULT SYSDATETIME(),
+    CONSTRAINT UX_Loyalty_points_user UNIQUE (user_id),
+    CONSTRAINT FK_Loyalty_points_user
+        FOREIGN KEY (user_id) REFERENCES dbo.Users(id) ON DELETE CASCADE,
+    CONSTRAINT CK_Loyalty_points_points CHECK (points >= 0),
+    CONSTRAINT CK_Loyalty_points_spent CHECK (total_spent >= 0)
 );
 
-CREATE TABLE dbo.contacts (
+CREATE TABLE dbo.Contacts (
     id       INT IDENTITY(1,1) PRIMARY KEY,
     user_id  INT NULL,
     name     NVARCHAR(120) NOT NULL,
@@ -192,39 +192,39 @@ CREATE TABLE dbo.contacts (
     email    VARCHAR(254) NULL,
     address  NVARCHAR(500) NULL,
     notes    NVARCHAR(1000) NULL,
-    CONSTRAINT FK_contacts_user
-        FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE SET NULL,
-    CONSTRAINT CK_contacts_position CHECK (position IN ('owner', 'manager', 'employee', 'other'))
+    CONSTRAINT FK_Contacts_user
+        FOREIGN KEY (user_id) REFERENCES dbo.Users(id) ON DELETE SET NULL,
+    CONSTRAINT CK_Contacts_position CHECK (position IN ('owner', 'manager', 'employee', 'other'))
 );
 
-CREATE TABLE dbo.system_settings (
+CREATE TABLE dbo.System_settings (
     id            INT IDENTITY(1,1) PRIMARY KEY,
     updated_by_user_id INT NULL,
     setting_key   VARCHAR(100) NOT NULL,
     setting_value NVARCHAR(2000) NULL,
     description   NVARCHAR(500) NULL,
-    CONSTRAINT FK_system_settings_updated_by
-        FOREIGN KEY (updated_by_user_id) REFERENCES dbo.users(id),
-    CONSTRAINT UX_system_settings_key UNIQUE (setting_key)
+    CONSTRAINT FK_System_settings_updated_by
+        FOREIGN KEY (updated_by_user_id) REFERENCES dbo.Users(id),
+    CONSTRAINT UX_System_settings_key UNIQUE (setting_key)
 );
 GO
 
-CREATE INDEX IX_orders_user_date ON dbo.orders(user_id, order_date DESC);
-CREATE INDEX IX_orders_pending_deposits
-    ON dbo.orders(status, pickup_date)
+CREATE INDEX IX_Orders_user_date ON dbo.Orders(user_id, order_date DESC);
+CREATE INDEX IX_Orders_pending_deposits
+    ON dbo.Orders(status, pickup_date)
     INCLUDE (user_id, deposit_amount)
     WHERE order_type = 'deposit';
-CREATE INDEX IX_order_items_product ON dbo.order_items(product_id);
-CREATE INDEX IX_payments_order_date ON dbo.payments(order_id, created_at DESC);
+CREATE INDEX IX_Order_items_product ON dbo.Order_items(product_id);
+CREATE INDEX IX_Payments_order_date ON dbo.Payments(order_id, created_at DESC);
 CREATE INDEX IX_order_history_order_date
-    ON dbo.order_status_history(order_id, changed_at DESC);
-CREATE INDEX IX_promotion_items_product_dates
-    ON dbo.promotion_items(product_id, status, start_date, end_date);
-CREATE INDEX IX_promotion_items_promotion_product
-    ON dbo.promotion_items(promotion_id, product_id);
+    ON dbo.Order_status_history(order_id, changed_at DESC);
+CREATE INDEX IX_Promotion_items_product_dates
+    ON dbo.Promotion_items(product_id, status, start_date, end_date);
+CREATE INDEX IX_Promotion_items_Promotion_product
+    ON dbo.Promotion_items(Promotion_id, product_id);
 GO
 
-CREATE OR ALTER PROCEDURE dbo.usp_products_find_by_barcode
+CREATE OR ALTER PROCEDURE dbo.usp_Products_find_by_barcode
     @barcode VARCHAR(64)
 AS
 BEGIN
@@ -242,12 +242,12 @@ BEGIN
         image_url,
         category,
         barcode
-    FROM dbo.products
+    FROM dbo.Products
     WHERE barcode = @normalized_barcode;
 END;
 GO
 
-CREATE OR ALTER PROCEDURE dbo.usp_products_set_barcode
+CREATE OR ALTER PROCEDURE dbo.usp_Products_set_barcode
     @product_id INT,
     @barcode VARCHAR(64)
 AS
@@ -257,7 +257,7 @@ BEGIN
 
     DECLARE @normalized_barcode VARCHAR(64) = NULLIF(LTRIM(RTRIM(@barcode)), '');
 
-    IF NOT EXISTS (SELECT 1 FROM dbo.products WHERE id = @product_id)
+    IF NOT EXISTS (SELECT 1 FROM dbo.Products WHERE id = @product_id)
         THROW 51002, 'Product does not exist.', 1;
 
     IF @normalized_barcode IS NOT NULL
@@ -270,13 +270,13 @@ BEGIN
     IF @normalized_barcode IS NOT NULL
        AND EXISTS (
            SELECT 1
-           FROM dbo.products
+           FROM dbo.Products
            WHERE barcode = @normalized_barcode
              AND id <> @product_id
        )
         THROW 51004, 'Barcode is already assigned to another product.', 1;
 
-    UPDATE dbo.products
+    UPDATE dbo.Products
     SET barcode = @normalized_barcode
     WHERE id = @product_id;
 END;
@@ -290,7 +290,7 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    UPDATE dbo.products
+    UPDATE dbo.Products
     SET stock = stock + @quantity_change
     WHERE id = @product_id
       AND stock + @quantity_change >= 0;
@@ -307,54 +307,54 @@ BEGIN
     SET XACT_ABORT ON;
     BEGIN TRANSACTION;
 
-    DECLARE @expired_orders TABLE (order_id INT PRIMARY KEY);
+    DECLARE @expired_Orders TABLE (order_id INT PRIMARY KEY);
 
-    UPDATE dbo.orders WITH (UPDLOCK, READPAST, ROWLOCK)
+    UPDATE dbo.Orders WITH (UPDLOCK, READPAST, ROWLOCK)
     SET status = 'no_show',
         pickup_status = 'no_show',
         cancelled_at = SYSDATETIME(),
         cancellation_reason = N'Kh√¥ng nh·∫≠n h√†ng'
-    OUTPUT inserted.id INTO @expired_orders(order_id)
+    OUTPUT inserted.id INTO @expired_Orders(order_id)
     WHERE order_type = 'deposit'
       AND status = 'deposit_pending'
       AND pickup_date < CAST(GETDATE() AS DATE);
 
     UPDATE p
     SET stock = stock + expired.quantity
-    FROM dbo.products p
+    FROM dbo.Products p
     INNER JOIN (
         SELECT oi.product_id, SUM(oi.quantity) AS quantity
-        FROM dbo.order_items oi
-        INNER JOIN @expired_orders eo ON eo.order_id = oi.order_id
+        FROM dbo.Order_items oi
+        INNER JOIN @expired_Orders eo ON eo.order_id = oi.order_id
         GROUP BY oi.product_id
     ) expired ON expired.product_id = p.id;
 
-    DECLARE @expired_count INT = (SELECT COUNT(*) FROM @expired_orders);
+    DECLARE @expired_count INT = (SELECT COUNT(*) FROM @expired_Orders);
     COMMIT TRANSACTION;
     SELECT @expired_count AS expired_count;
 END;
 GO
 
-CREATE OR ALTER TRIGGER dbo.trg_users_create_loyalty_account
-ON dbo.users
+CREATE OR ALTER TRIGGER dbo.trg_Users_create_loyalty_account
+ON dbo.Users
 AFTER INSERT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO dbo.loyalty_points (user_id, points, total_spent)
+    INSERT INTO dbo.Loyalty_points (user_id, points, total_spent)
     SELECT i.id, 0, 0
     FROM inserted i
     WHERE NOT EXISTS (
         SELECT 1
-        FROM dbo.loyalty_points lp
+        FROM dbo.Loyalty_points lp
         WHERE lp.user_id = i.id
     );
 END;
 GO
 
-CREATE OR ALTER TRIGGER dbo.trg_products_set_updated_at
-ON dbo.products
+CREATE OR ALTER TRIGGER dbo.trg_Products_set_updated_at
+ON dbo.Products
 AFTER UPDATE
 AS
 BEGIN
@@ -365,13 +365,13 @@ BEGIN
 
     UPDATE p
     SET updated_at = SYSDATETIME()
-    FROM dbo.products p
+    FROM dbo.Products p
     INNER JOIN inserted i ON i.id = p.id;
 END;
 GO
 
-CREATE OR ALTER TRIGGER dbo.trg_order_items_validate_stock
-ON dbo.order_items
+CREATE OR ALTER TRIGGER dbo.trg_Order_items_validate_stock
+ON dbo.Order_items
 AFTER INSERT, UPDATE
 AS
 BEGIN
@@ -384,7 +384,7 @@ BEGIN
             FROM inserted
             GROUP BY product_id
         ) requested
-        INNER JOIN dbo.products p ON p.id = requested.product_id
+        INNER JOIN dbo.Products p ON p.id = requested.product_id
         WHERE requested.requested_quantity > p.stock
     )
     BEGIN
@@ -394,14 +394,14 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER TRIGGER dbo.trg_orders_create_payment_and_history
-ON dbo.orders
+CREATE OR ALTER TRIGGER dbo.trg_Orders_create_payment_and_history
+ON dbo.Orders
 AFTER INSERT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO dbo.payments
+    INSERT INTO dbo.Payments
         (order_id, payment_stage, payment_method, amount, status, paid_at)
     SELECT
         i.id,
@@ -412,20 +412,20 @@ BEGIN
         CASE WHEN i.status = 'pending' THEN NULL ELSE SYSDATETIME() END
     FROM inserted i;
 
-    INSERT INTO dbo.order_status_history (order_id, old_status, new_status, note)
+    INSERT INTO dbo.Order_status_history (order_id, old_status, new_status, note)
     SELECT i.id, NULL, i.status, N'T·∫°o ƒë∆°n h√†ng'
     FROM inserted i;
 END;
 GO
 
-CREATE OR ALTER TRIGGER dbo.trg_orders_track_status
-ON dbo.orders
+CREATE OR ALTER TRIGGER dbo.trg_Orders_track_status
+ON dbo.Orders
 AFTER UPDATE
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    INSERT INTO dbo.order_status_history (order_id, old_status, new_status, note)
+    INSERT INTO dbo.Order_status_history (order_id, old_status, new_status, note)
     SELECT
         i.id,
         d.status,
@@ -440,7 +440,7 @@ BEGIN
     INNER JOIN deleted d ON d.id = i.id
     WHERE i.status <> d.status;
 
-    INSERT INTO dbo.payments
+    INSERT INTO dbo.Payments
         (order_id, payment_stage, payment_method, amount, status, paid_at)
     SELECT
         i.id,
@@ -457,7 +457,7 @@ BEGIN
       AND i.total_amount > i.deposit_amount
       AND NOT EXISTS (
           SELECT 1
-          FROM dbo.payments p
+          FROM dbo.Payments p
           WHERE p.order_id = i.id
             AND p.payment_stage = 'balance'
             AND p.status = 'paid'
@@ -488,10 +488,10 @@ AS
             ) / 100.0
             AS DECIMAL(18,2)
         ) AS effective_price
-    FROM dbo.products p
+    FROM dbo.Products p
     OUTER APPLY (
         SELECT TOP (1) pi.discount_percent
-        FROM dbo.promotion_items pi
+        FROM dbo.Promotion_items pi
         WHERE pi.product_id = p.id
           AND pi.status = 'active'
           AND CAST(GETDATE() AS DATE) BETWEEN pi.start_date AND pi.end_date
@@ -499,7 +499,7 @@ AS
     ) item_discount
     OUTER APPLY (
         SELECT TOP (1) pr.discount_percent
-        FROM dbo.promotions pr
+        FROM dbo.Promotions pr
         WHERE pr.status = 'active'
           AND CAST(GETDATE() AS DATE) BETWEEN pr.start_date AND pr.end_date
         ORDER BY pr.discount_percent DESC, pr.id DESC
@@ -521,7 +521,7 @@ AS
             ELSE 'in_stock'
         END AS inventory_status,
         updated_at
-    FROM dbo.products;
+    FROM dbo.Products;
 GO
 
 CREATE OR ALTER VIEW dbo.vw_order_summary
@@ -548,12 +548,12 @@ AS
         COUNT(oi.id) AS line_count,
         COALESCE(SUM(oi.quantity), 0) AS item_count,
         COALESCE(MAX(pay.amount), 0) AS paid_amount
-    FROM dbo.orders o
-    INNER JOIN dbo.users u ON u.id = o.user_id
-    LEFT JOIN dbo.order_items oi ON oi.order_id = o.id
+    FROM dbo.Orders o
+    INNER JOIN dbo.Users u ON u.id = o.user_id
+    LEFT JOIN dbo.Order_items oi ON oi.order_id = o.id
     LEFT JOIN (
         SELECT order_id, SUM(amount) AS amount
-        FROM dbo.payments
+        FROM dbo.Payments
         WHERE status = 'paid'
         GROUP BY order_id
     ) pay ON pay.order_id = o.id
@@ -590,8 +590,8 @@ AS
             WHEN o.status = 'picked_up' THEN N'ƒê√£ c·ªçc v√† ƒë√£ nh·∫≠n h√†ng'
             ELSE N'ƒê√£ c·ªçc - Ch·ªù nh·∫≠n h√†ng'
         END AS transaction_tag
-    FROM dbo.orders o
-    INNER JOIN dbo.users u ON u.id = o.user_id
+    FROM dbo.Orders o
+    INNER JOIN dbo.Users u ON u.id = o.user_id
     WHERE o.order_type = 'deposit';
 GO
 
@@ -601,7 +601,7 @@ GO
     password: admin123
   Change this password immediately after first login.
 */
-INSERT INTO dbo.users (username, password_hash, fullname, email, role)
+INSERT INTO dbo.Users (username, password_hash, fullname, email, role)
 VALUES (
     'admin',
     '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
@@ -612,9 +612,9 @@ VALUES (
 
 /*
   These are development barcodes. Replace them with the codes printed on
-  the products in your shop. Values are strings to preserve leading zeroes.
+  the Products in your shop. Values are strings to preserve leading zeroes.
 */
-INSERT INTO dbo.products
+INSERT INTO dbo.Products
     (name, price, description, stock, sold_count, image_url, category, barcode)
 VALUES
     (N'C√† ph√™ s·ªØa', 35000, N'C√† ph√™ rang xay v·ªõi s·ªØa ƒë·∫∑c.', 100, 0, NULL, N'Coffee', '8938501434012'),
@@ -622,22 +622,22 @@ VALUES
     (N'Tr√† ƒë√†o', 45000, N'Tr√† ƒë√†o thanh m√°t.', 80, 0, NULL, N'Tea', '8938501434036'),
     (N'B√°nh s·ª´ng b√≤', 28000, N'B√°nh b∆° n∆∞·ªõng trong ng√†y.', 40, 0, NULL, N'Pastry', '8938501434043');
 
-INSERT INTO dbo.system_settings
+INSERT INTO dbo.System_settings
     (updated_by_user_id, setting_key, setting_value, description)
 VALUES
-    ((SELECT id FROM dbo.users WHERE username = 'admin'),
+    ((SELECT id FROM dbo.Users WHERE username = 'admin'),
      'store_name', N'Chidori Coffee', N'T√™n c·ª≠a h√†ng'),
-    ((SELECT id FROM dbo.users WHERE username = 'admin'),
+    ((SELECT id FROM dbo.Users WHERE username = 'admin'),
      'currency', 'VND', N'ƒê∆°n v·ªã ti·ªÅn t·ªá'),
-    ((SELECT id FROM dbo.users WHERE username = 'admin'),
+    ((SELECT id FROM dbo.Users WHERE username = 'admin'),
      'barcode_scanner_enabled', 'true', N'Cho ph√©p th√™m s·∫£n ph·∫©m b·∫±ng m√°y qu√©t m√£ v·∫°ch'),
-    ((SELECT id FROM dbo.users WHERE username = 'admin'),
+    ((SELECT id FROM dbo.Users WHERE username = 'admin'),
      'deposit_percent', '30', N'Ph·∫ßn trƒÉm ti·ªÅn c·ªçc m·∫∑c ƒë·ªãnh');
 GO
 
-INSERT INTO dbo.contacts (user_id, name, position, phone, email, address, notes)
+INSERT INTO dbo.Contacts (user_id, name, position, phone, email, address, notes)
 VALUES
-    ((SELECT id FROM dbo.users WHERE username = 'admin'),
+    ((SELECT id FROM dbo.Users WHERE username = 'admin'),
      N'Chidori Administrator', 'manager', '19001234',
      'admin@chidori.local', N'123 ƒê∆∞·ªùng C√† Ph√™, Qu·∫≠n 1, TP.HCM',
      N'T√†i kho·∫£n qu·∫£n tr·ªã h·ªá th·ªëng'),
@@ -645,12 +645,12 @@ VALUES
      'owner@chidori.local', N'H·ªì Ch√≠ Minh', N'Ch·ªß c·ª≠a h√†ng');
 GO
 
-INSERT INTO dbo.promotions
+INSERT INTO dbo.Promotions
     (created_by_user_id, title, description, discount_percent,
      start_date, end_date, image_url, status)
 VALUES
     (
-        (SELECT id FROM dbo.users WHERE username = 'admin'),
+        (SELECT id FROM dbo.Users WHERE username = 'admin'),
         N'∆Øu ƒë√£i khai tr∆∞∆°ng',
         N'Gi·∫£m 10% to√†n b·ªô s·∫£n ph·∫©m trong th·ªùi gian khuy·∫øn m√£i.',
         10,
@@ -661,8 +661,8 @@ VALUES
     );
 GO
 
-INSERT INTO dbo.promotion_items
-    (promotion_id, product_id, discount_percent, start_date, end_date, status)
+INSERT INTO dbo.Promotion_items
+    (Promotion_id, product_id, discount_percent, start_date, end_date, status)
 SELECT
     pr.id,
     p.id,
@@ -670,15 +670,15 @@ SELECT
     pr.start_date,
     pr.end_date,
     'active'
-FROM dbo.promotions pr
-CROSS JOIN dbo.products p
+FROM dbo.Promotions pr
+CROSS JOIN dbo.Products p
 WHERE pr.title = N'∆Øu ƒë√£i khai tr∆∞∆°ng';
 GO
 
 -- A valid barcode must resolve to one and only one product.
 IF EXISTS (
     SELECT barcode
-    FROM dbo.products
+    FROM dbo.Products
     WHERE barcode IS NOT NULL
     GROUP BY barcode
     HAVING COUNT(*) <> 1
@@ -689,46 +689,46 @@ END;
 GO
 
 IF NOT EXISTS (
-    SELECT 1 FROM dbo.products
+    SELECT 1 FROM dbo.Products
     WHERE name = N'C√† ph√™ s·ªØa' AND barcode = '8938501434012'
 )
     THROW 51011, 'Seed barcode mismatch: C√† ph√™ s·ªØa.', 1;
 
 IF NOT EXISTS (
-    SELECT 1 FROM dbo.products
+    SELECT 1 FROM dbo.Products
     WHERE name = N'C√† ph√™ ƒëen' AND barcode = '8938501434029'
 )
     THROW 51012, 'Seed barcode mismatch: C√† ph√™ ƒëen.', 1;
 
 IF NOT EXISTS (
-    SELECT 1 FROM dbo.products
+    SELECT 1 FROM dbo.Products
     WHERE name = N'Tr√† ƒë√†o' AND barcode = '8938501434036'
 )
     THROW 51013, 'Seed barcode mismatch: Tr√† ƒë√†o.', 1;
 
 IF NOT EXISTS (
-    SELECT 1 FROM dbo.products
+    SELECT 1 FROM dbo.Products
     WHERE name = N'B√°nh s·ª´ng b√≤' AND barcode = '8938501434043'
 )
     THROW 51014, 'Seed barcode mismatch: B√°nh s·ª´ng b√≤.', 1;
 GO
 
-UPDATE dbo.products
+UPDATE dbo.Products
 SET image_url =
     '/ChidoriManagementSystem/assets/images/capheden.jpeg'
 WHERE name = N'C√† ph√™ ƒëen';
 
-UPDATE dbo.products
+UPDATE dbo.Products
 SET image_url =
     '/ChidoriManagementSystem/assets/images/caphesua.jpeg'
 WHERE name = N'C√† ph√™ s·ªØa';
 
-UPDATE dbo.products
+UPDATE dbo.Products
 SET image_url =
     '/ChidoriManagementSystem/assets/images/tradao.jpeg'
 WHERE name = N'Tr√† ƒë√†o';
 
-UPDATE dbo.products
+UPDATE dbo.Products
 SET image_url =
     '/ChidoriManagementSystem/assets/images/banhsungbo.jpeg'
 WHERE name = N'B√°nh s·ª´ng b√≤';
