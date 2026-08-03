@@ -68,10 +68,9 @@ public class AuthFilter implements Filter {
         }
 
         if (uri.startsWith(contextPath + "/admin")) {
-            boolean report = uri.startsWith(contextPath + "/admin/report");
             boolean users = uri.startsWith(contextPath + "/admin/users");
             boolean products = uri.startsWith(contextPath + "/admin/products");
-            boolean managerArea = report || users || products;
+            boolean managerArea = users || products;
             boolean allowed = "admin".equalsIgnoreCase(user.getRole())
                     || (managerArea && "manager".equalsIgnoreCase(user.getRole()));
             if (!allowed) {

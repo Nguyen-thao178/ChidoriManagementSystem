@@ -3034,6 +3034,13 @@ footer {
     padding: 0;
 }
 
+.permission-locked {
+    color: var(--text-secondary);
+    font-size: .82rem;
+    opacity: .82;
+    white-space: nowrap;
+}
+
 .balance-payment-method {
     display: flex;
     gap: 0.75rem;

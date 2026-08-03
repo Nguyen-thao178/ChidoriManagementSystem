@@ -20,9 +20,7 @@ public class ChatHistoryPrintServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         User user = (User) request.getSession().getAttribute("user");
-        if (user == null
-                || (!"admin".equalsIgnoreCase(user.getRole())
-                && !"manager".equalsIgnoreCase(user.getRole()))) {
+        if (user == null || !"admin".equalsIgnoreCase(user.getRole())) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }

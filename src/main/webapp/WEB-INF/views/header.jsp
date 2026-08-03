@@ -54,7 +54,6 @@
         <c:if test="${sessionScope.user.role == 'manager'}">
             <a href="${pageContext.request.contextPath}/admin/users">👥 Quản lý nhân viên</a>
             <a href="${pageContext.request.contextPath}/admin/products">📦 Quản lý menu</a>
-            <a href="${pageContext.request.contextPath}/admin/report">📊 Báo cáo</a>
         </c:if>
     </nav>
     <div class="breadcrumb">
