@@ -94,4 +94,4 @@
         </div>
     </div>
 </aside>
-<script src="${pageContext.request.contextPath}/assets/js/main.js?v=20260729-chat1"></script>
+<script src="${pageContext.request.contextPath}/assets/js/main.js?v=20260803-coffee-ambient1"></script>

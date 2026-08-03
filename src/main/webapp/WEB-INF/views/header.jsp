@@ -14,7 +14,8 @@
             <button type="submit">🔍</button>
         </form>
         <div class="user-actions">
-            <button id="themeToggle" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">🌙</button>
+            <button id="themeToggle" class="theme-toggle" type="button"
+                    aria-label="Chuyển giao diện sáng/tối">🌙</button>
             <c:if test="${not empty sessionScope.user}">
                 <span>🧑‍💼 ${sessionScope.user.fullname} (${sessionScope.user.role})</span>
                 <!-- ⭐ Lịch sử đơn hàng cho TẤT CẢ user (kể cả staff) -->

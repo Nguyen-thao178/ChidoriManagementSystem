@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <title>${product == null ? "Thêm mới" : "Cập nhật"} sản phẩm - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-coffee-ambient1">
 </head>
 <body>
 <%@ include file="/WEB-INF/views/header.jsp" %>

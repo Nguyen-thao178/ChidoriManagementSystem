@@ -1,6 +1,65 @@
 document.addEventListener('DOMContentLoaded', function() {
     var contextPath = window.contextPath || '';
 
+    // ==================== AMBIENT COFFEE BACKGROUND ====================
+    function initCoffeeAmbient() {
+        if (document.querySelector('.chidori-ambient')) return;
+
+        var ambient = document.createElement('div');
+        ambient.className = 'chidori-ambient';
+        ambient.setAttribute('aria-hidden', 'true');
+
+        var particles = document.createElement('div');
+        particles.className = 'coffee-particles';
+        ambient.appendChild(particles);
+        document.body.prepend(ambient);
+
+        var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var compactScreen = window.matchMedia('(max-width: 700px)').matches;
+        var particleCount = reduceMotion ? 0 : (compactScreen ? 12 : 24);
+
+        for (var index = 0; index < particleCount; index++) {
+            var bean = document.createElement('span');
+            bean.className = 'coffee-particle';
+            bean.style.setProperty('--bean-x', (Math.random() * 100).toFixed(2) + 'vw');
+            bean.style.setProperty('--bean-size', (10 + Math.random() * 13).toFixed(1) + 'px');
+            bean.style.setProperty('--bean-duration', (12 + Math.random() * 16).toFixed(2) + 's');
+            bean.style.setProperty('--bean-delay', (-Math.random() * 28).toFixed(2) + 's');
+            bean.style.setProperty('--bean-drift', (-70 + Math.random() * 140).toFixed(1) + 'px');
+            bean.style.setProperty('--bean-spin', (240 + Math.random() * 620).toFixed(0) + 'deg');
+            bean.style.setProperty('--bean-opacity', (0.16 + Math.random() * 0.34).toFixed(2));
+            particles.appendChild(bean);
+        }
+
+        if (window.matchMedia('(pointer: fine)').matches) {
+            var targetX = window.innerWidth / 2;
+            var targetY = window.innerHeight * 0.28;
+            var currentX = targetX;
+            var currentY = targetY;
+            var framePending = false;
+
+            function renderSpotlight() {
+                currentX += (targetX - currentX) * 0.18;
+                currentY += (targetY - currentY) * 0.18;
+                ambient.style.setProperty('--spot-x', currentX.toFixed(1) + 'px');
+                ambient.style.setProperty('--spot-y', currentY.toFixed(1) + 'px');
+                framePending = Math.abs(targetX - currentX) > 0.2 || Math.abs(targetY - currentY) > 0.2;
+                if (framePending) window.requestAnimationFrame(renderSpotlight);
+            }
+
+            window.addEventListener('pointermove', function(event) {
+                targetX = event.clientX;
+                targetY = event.clientY;
+                if (!framePending) {
+                    framePending = true;
+                    window.requestAnimationFrame(renderSpotlight);
+                }
+            }, { passive: true });
+        }
+    }
+
+    initCoffeeAmbient();
+
     // ==================== SLIDER ====================
     var slideIndex = 0;
     var slides = document.querySelectorAll('.slide');
@@ -252,10 +311,16 @@ document.addEventListener('DOMContentLoaded', function() {
         var currentTheme = localStorage.getItem('theme') || 'dark';
         if (currentTheme === 'light') document.documentElement.classList.add('light');
         themeToggle.textContent = currentTheme === 'light' ? '🌙' : '☀️';
+        themeToggle.setAttribute('aria-label', currentTheme === 'light'
+            ? 'Chuyển sang giao diện tối' : 'Chuyển sang giao diện sáng');
+        themeToggle.setAttribute('title', themeToggle.getAttribute('aria-label'));
         themeToggle.addEventListener('click', function() {
             var isLight = document.documentElement.classList.toggle('light');
             localStorage.setItem('theme', isLight ? 'light' : 'dark');
             themeToggle.textContent = isLight ? '🌙' : '☀️';
+            themeToggle.setAttribute('aria-label', isLight
+                ? 'Chuyển sang giao diện tối' : 'Chuyển sang giao diện sáng');
+            themeToggle.setAttribute('title', themeToggle.getAttribute('aria-label'));
         });
     }
 });

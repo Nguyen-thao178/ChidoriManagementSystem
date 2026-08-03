@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${product.name} - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-coffee-ambient1">
 </head>
 <body>
 <%@ include file="header.jsp" %>

@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${user == null ? "Thêm nhân viên" : "Sửa nhân viên"} - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260729-theme2">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-coffee-ambient1">
     <style>
         .form-container { max-width: 500px; margin: 2rem auto; }
         .form-container select { width: 100%; padding: 0.8rem; background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 12px; color: white; }
