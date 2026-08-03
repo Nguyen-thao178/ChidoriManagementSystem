@@ -6,6 +6,7 @@ import com.cafe.model.CartItem;
 import com.cafe.model.Payment;
 import com.cafe.model.User;
 import com.cafe.payment.VNPayConfig;
+import com.cafe.service.SystemSettingsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -27,7 +28,8 @@ public class CheckoutServlet extends HttpServlet {
             throws ServletException, IOException {
         // Hiển thị trang checkout với QR
         req.setAttribute("minPickupDate", LocalDate.now().plusDays(1).toString());
-        req.setAttribute("depositPercent", (int) (OrderDAO.DEFAULT_DEPOSIT_RATE * 100));
+        req.setAttribute("depositPercent",
+                SystemSettingsService.getPositiveInt("deposit_percent", 30));
         req.setAttribute("vnpaySandbox", VNPayConfig.isSandbox());
         req.getRequestDispatcher("/WEB-INF/views/checkout.jsp").forward(req, resp);
     }
@@ -91,8 +93,9 @@ public class CheckoutServlet extends HttpServlet {
         double total = cart.stream()
                 .mapToDouble(item -> item.getDiscountedPrice() * item.getQuantity())
                 .sum();
+        double depositRate = SystemSettingsService.getPositiveInt("deposit_percent", 30) / 100.0;
         double payableAmount = "deposit".equals(orderType)
-                ? Math.round(total * OrderDAO.DEFAULT_DEPOSIT_RATE)
+                ? Math.round(total * depositRate)
                 : total;
 
         if ("vnpay".equals(paymentMethod)) {

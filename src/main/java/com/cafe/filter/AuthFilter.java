@@ -1,6 +1,7 @@
 package com.cafe.filter;
 
 import com.cafe.model.User;
+import com.cafe.service.SystemSettingsService;
 import com.cafe.utils.CsrfUtil;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -30,6 +31,7 @@ public class AuthFilter implements Filter {
         boolean isAsset = uri.startsWith(contextPath + "/assets");
         if (!isAsset) {
             CsrfUtil.ensureToken(req.getSession());
+            req.setAttribute("appSettings", SystemSettingsService.getSettings());
         }
 
         boolean isPublic = uri.startsWith(contextPath + "/login")

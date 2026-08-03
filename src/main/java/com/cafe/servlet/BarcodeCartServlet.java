@@ -2,6 +2,7 @@ package com.cafe.servlet;
 
 import com.cafe.service.CartService;
 import com.cafe.service.CartService.AddResult;
+import com.cafe.service.SystemSettingsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -22,6 +23,16 @@ public class BarcodeCartServlet extends HttpServlet {
         req.setCharacterEncoding("UTF-8");
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
+
+        if (!SystemSettingsService.getBoolean("barcode_scanner_enabled", true)) {
+            resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            objectMapper.writeValue(resp.getWriter(), Map.of(
+                    "success", false,
+                    "code", "SCANNER_DISABLED",
+                    "message", "Chức năng quét barcode đang bị tắt trong Cài đặt hệ thống."
+            ));
+            return;
+        }
 
         String barcode = req.getParameter("barcode");
         AddResult result = cartService.addByBarcode(req.getSession(), barcode);

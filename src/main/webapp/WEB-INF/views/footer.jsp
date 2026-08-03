@@ -2,23 +2,23 @@
 <footer>
     <div class="footer-content">
         <div class="footer-section">
-            <h4>Chidori Coffee</h4>
-            <p>Thương hiệu cà phê rang xay nguyên chất</p>
-            <p>📞 Hotline: 1900 1234</p>
-            <p>📍 123 Đường Cà Phê, Quận 1, TP.HCM</p>
+            <h4><c:out value="${appSettings.store_name}"/></h4>
+            <p><c:out value="${appSettings.store_tagline}"/></p>
+            <p>📞 Hotline: <c:out value="${appSettings.hotline}"/></p>
+            <p>📍 <c:out value="${appSettings.address}"/></p>
         </div>
         <div class="footer-section">
             <h4>Giờ mở cửa</h4>
-            <p>Thứ 2 - Thứ 6: 7:00 - 21:00</p>
-            <p>Thứ 7 - CN: 8:00 - 22:00</p>
+            <p><c:out value="${appSettings.weekday_hours}"/></p>
+            <p><c:out value="${appSettings.weekend_hours}"/></p>
         </div>
         <div class="footer-section">
             <h4>Theo dõi</h4>
-            <p>Facebook | Instagram | Tiktok</p>
+            <p><c:out value="${appSettings.social_links}"/></p>
         </div>
     </div>
     <div class="copyright">
-        &copy; 2025 Chidori Coffee System. All rights reserved.
+        &copy; 2026 <c:out value="${appSettings.store_name}"/> System. All rights reserved.
     </div>
 </footer>
 <!-- Chidori Assistant -->

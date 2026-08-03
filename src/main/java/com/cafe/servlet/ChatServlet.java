@@ -7,6 +7,7 @@ import com.cafe.model.Product;
 import com.cafe.model.Promotion;
 import com.cafe.model.User;
 import com.cafe.service.GeminiService;
+import com.cafe.service.SystemSettingsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -78,15 +79,19 @@ public class ChatServlet extends HttpServlet {
 
     private String buildCafeContext() {
         NumberFormat money = NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN"));
+        Map<String, String> settings = SystemSettingsService.getSettings();
         StringBuilder context = new StringBuilder("""
-                - Hotline: 1900 1234
-                - Địa chỉ: 123 Đường Cà Phê, Quận 1, TP.HCM
-                - Giờ mở cửa: Thứ 2–Thứ 6 07:00–21:00; Thứ 7–Chủ nhật 08:00–22:00
+                - Tên cửa hàng: %s
+                - Hotline: %s
+                - Địa chỉ: %s
+                - Giờ mở cửa: %s; %s
                 - Đặt cọc: thanh toán tiền cọc bằng tiền mặt hoặc VNPay, chọn ngày nhận.
                   Quá ngày nhận mà khách không nhận, đơn chuyển trạng thái "Không nhận hàng" và hàng hoàn kho.
                 - Thanh toán trực tiếp: tiền mặt hoặc VNPay.
                 - Barcode hỗ trợ: EAN-13; quét tại màn hình giỏ hàng.
-                """);
+                """.formatted(
+                settings.get("store_name"), settings.get("hotline"), settings.get("address"),
+                settings.get("weekday_hours"), settings.get("weekend_hours")));
 
         List<Product> products = productDAO.getAllProducts();
         context.append("\n- Menu từ database:\n");
@@ -120,7 +125,8 @@ public class ChatServlet extends HttpServlet {
                 || lower.contains("giá") || lower.contains("bao nhiêu")) {
             List<Product> products = productDAO.getAllProducts();
             if (products.isEmpty()) {
-                return "Mình chưa tải được menu lúc này. Bạn vui lòng gọi 1900 1234 để được hỗ trợ nhé.";
+                return "Mình chưa tải được menu lúc này. Bạn vui lòng gọi "
+                        + SystemSettingsService.get("hotline") + " để được hỗ trợ nhé.";
             }
             NumberFormat money = NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN"));
             StringBuilder reply = new StringBuilder("Menu hiện có: ");
@@ -130,9 +136,14 @@ public class ChatServlet extends HttpServlet {
             return reply.substring(0, reply.length() - 2) + ".";
         }
         if (lower.contains("cọc") || lower.contains("nhận hàng")) {
-            return "Bạn có thể cọc bằng tiền mặt hoặc VNPay và chọn ngày nhận. Nếu quá ngày mà chưa nhận, đơn sẽ được ghi là “Không nhận hàng” và sản phẩm được hoàn kho.";
+            return "Bạn có thể cọc " + SystemSettingsService.get("deposit_percent")
+                    + "% bằng tiền mặt hoặc VNPay và chọn ngày nhận. Nếu quá ngày mà chưa nhận, "
+                    + "đơn sẽ được ghi là “Không nhận hàng” và sản phẩm được hoàn kho.";
         }
         if (lower.contains("barcode") || lower.contains("mã vạch") || lower.contains("quét")) {
+            if (!SystemSettingsService.getBoolean("barcode_scanner_enabled", true)) {
+                return "Chức năng quét barcode đang tạm tắt theo cấu hình của quán.";
+            }
             return "Chidori hỗ trợ barcode EAN-13. Tại Giỏ hàng, hãy đặt con trỏ vào ô quét rồi quét mã; đúng sản phẩm sẽ tự được thêm vào cart.";
         }
         if (lower.contains("khuyến mãi") || lower.contains("giảm giá")) {
@@ -144,7 +155,10 @@ public class ChatServlet extends HttpServlet {
         }
         if (lower.contains("liên hệ") || lower.contains("hotline") || lower.contains("địa chỉ")
                 || lower.contains("mở cửa")) {
-            return "Chidori Coffee: 123 Đường Cà Phê, Quận 1, TP.HCM · Hotline 1900 1234. Mở cửa T2–T6 07:00–21:00, T7–CN 08:00–22:00.";
+            Map<String, String> settings = SystemSettingsService.getSettings();
+            return settings.get("store_name") + ": " + settings.get("address")
+                    + " · Hotline " + settings.get("hotline") + ". Mở cửa "
+                    + settings.get("weekday_hours") + "; " + settings.get("weekend_hours") + ".";
         }
         if (lower.contains("thanh toán") || lower.contains("vnpay") || lower.contains("tiền mặt")) {
             return "Bạn có thể thanh toán trực tiếp hoặc đặt cọc, với hai phương thức là tiền mặt và VNPay.";

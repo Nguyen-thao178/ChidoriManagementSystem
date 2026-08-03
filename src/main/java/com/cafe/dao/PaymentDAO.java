@@ -2,6 +2,7 @@ package com.cafe.dao;
 
 import com.cafe.model.CartItem;
 import com.cafe.model.Payment;
+import com.cafe.service.SystemSettingsService;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -425,6 +426,7 @@ public class PaymentDAO {
 
     private void addLoyaltyAfterCommit(int userId, double amount) {
         if (amount <= 0) return;
-        new LoyaltyDAO().addPoints(userId, (int) (amount / 1000), amount);
+        int vndPerPoint = SystemSettingsService.getPositiveInt("loyalty_vnd_per_point", 1000);
+        new LoyaltyDAO().addPoints(userId, (int) (amount / vndPerPoint), amount);
     }
 }

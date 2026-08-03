@@ -114,9 +114,9 @@
 <body>
 <article class="receipt">
     <header class="center">
-        <h1 class="store-name">CHIDORI COFFEE</h1>
-        <p class="store-info">123 Đường Cà Phê, Quận 1, TP.HCM</p>
-        <p class="store-info">ĐT: 1900 1234</p>
+        <h1 class="store-name"><c:out value="${appSettings.store_name}"/></h1>
+        <p class="store-info"><c:out value="${appSettings.address}"/></p>
+        <p class="store-info">ĐT: <c:out value="${appSettings.hotline}"/></p>
         <h2 class="receipt-title">HÓA ĐƠN BÁN HÀNG</h2>
         <p class="receipt-type">
             <c:choose>
@@ -161,29 +161,29 @@
     <section class="summary">
         <div class="summary-row">
             <span>Tổng đơn:</span>
-            <strong><fmt:formatNumber value="${order.totalAmount}" pattern="#,##0"/>₫</strong>
+            <strong><fmt:formatNumber value="${order.totalAmount}" pattern="#,##0"/>${appSettings.currency_symbol}</strong>
         </div>
         <c:if test="${order.orderType == 'deposit'}">
             <div class="summary-row">
                 <span>Tiền cọc:</span>
-                <strong><fmt:formatNumber value="${order.depositAmount}" pattern="#,##0"/>₫</strong>
+                <strong><fmt:formatNumber value="${order.depositAmount}" pattern="#,##0"/>${appSettings.currency_symbol}</strong>
             </div>
             <c:if test="${paymentStage == 'deposit'}">
                 <div class="summary-row">
                     <span>Còn lại khi nhận:</span>
-                    <strong><fmt:formatNumber value="${remainingAmount}" pattern="#,##0"/>₫</strong>
+                    <strong><fmt:formatNumber value="${remainingAmount}" pattern="#,##0"/>${appSettings.currency_symbol}</strong>
                 </div>
             </c:if>
         </c:if>
         <div class="summary-row grand-total">
             <span>ĐÃ THU:</span>
-            <span><fmt:formatNumber value="${paidNow}" pattern="#,##0"/>₫</span>
+            <span><fmt:formatNumber value="${paidNow}" pattern="#,##0"/>${appSettings.currency_symbol}</span>
         </div>
     </section>
 
     <footer class="center">
         <p class="thanks">Cảm ơn Quý khách. Hẹn gặp lại!</p>
-        <p class="store-info">*** CHIDORI COFFEE ***</p>
+        <p class="store-info">*** <c:out value="${appSettings.store_name}"/> ***</p>
     </footer>
 </article>
 

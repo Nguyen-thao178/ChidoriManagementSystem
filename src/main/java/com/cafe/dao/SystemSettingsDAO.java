@@ -4,6 +4,7 @@ import com.cafe.model.SystemSetting;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class SystemSettingsDAO {
 
@@ -63,5 +64,46 @@ public class SystemSettingsDAO {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public boolean updateSettings(Map<String, String> settings, int updatedByUserId) {
+        String sql = """
+                MERGE dbo.system_settings WITH (HOLDLOCK) AS target
+                USING (SELECT ? AS setting_key, ? AS setting_value) AS source
+                   ON target.setting_key = source.setting_key
+                WHEN MATCHED THEN
+                    UPDATE SET setting_value = source.setting_value,
+                               updated_by_user_id = ?
+                WHEN NOT MATCHED THEN
+                    INSERT (setting_key, setting_value, description, updated_by_user_id)
+                    VALUES (source.setting_key, source.setting_value, N'Cấu hình hệ thống', ?);
+                """;
+        Connection connection = null;
+        try {
+            connection = DBConnection.getConnection();
+            connection.setAutoCommit(false);
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                for (Map.Entry<String, String> entry : settings.entrySet()) {
+                    statement.setString(1, entry.getKey());
+                    statement.setString(2, entry.getValue());
+                    statement.setInt(3, updatedByUserId);
+                    statement.setInt(4, updatedByUserId);
+                    statement.addBatch();
+                }
+                statement.executeBatch();
+            }
+            connection.commit();
+            return true;
+        } catch (SQLException exception) {
+            if (connection != null) {
+                try { connection.rollback(); } catch (SQLException ignored) { }
+            }
+            exception.printStackTrace();
+            return false;
+        } finally {
+            if (connection != null) {
+                try { connection.close(); } catch (SQLException ignored) { }
+            }
+        }
     }
 }

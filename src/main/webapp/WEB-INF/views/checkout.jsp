@@ -61,8 +61,8 @@
                                 <tr>
                                     <td><strong>${item.product.name}</strong></td>
                                     <td><span class="quantity-pill">${item.quantity}</span></td>
-                                    <td><fmt:formatNumber value="${item.discountedPrice}" type="number"/>₫</td>
-                                    <td><strong><fmt:formatNumber value="${item.discountedPrice * item.quantity}" type="number"/>₫</strong></td>
+                                    <td><fmt:formatNumber value="${item.discountedPrice}" type="number"/>${appSettings.currency_symbol}</td>
+                                    <td><strong><fmt:formatNumber value="${item.discountedPrice * item.quantity}" type="number"/>${appSettings.currency_symbol}</strong></td>
                                 </tr>
                                 <c:set var="total" value="${total + item.discountedPrice * item.quantity}"/>
                             </c:forEach>
@@ -70,7 +70,7 @@
                             <tfoot>
                             <tr class="total-row">
                                 <td colspan="3">Tổng giá trị đơn</td>
-                                <td><strong><fmt:formatNumber value="${total}" type="number"/>₫</strong></td>
+                                <td><strong><fmt:formatNumber value="${total}" type="number"/>${appSettings.currency_symbol}</strong></td>
                             </tr>
                             </tfoot>
                         </table>
@@ -107,7 +107,7 @@
                             <input type="date" id="pickupDate" name="pickupDate" min="${minPickupDate}">
                             <p><span>Tiền cọc (${depositPercent}%)</span>
                                 <strong class="deposit-highlight">
-                                    <fmt:formatNumber value="${total * depositPercent / 100}" type="number"/>₫
+                                    <fmt:formatNumber value="${total * depositPercent / 100}" type="number"/>${appSettings.currency_symbol}
                                 </strong>
                             </p>
                             <small>ⓘ Quá ngày nhận, đơn chuyển sang “Không nhận hàng” và sản phẩm được hoàn kho.</small>
@@ -179,6 +179,7 @@
         const message = document.getElementById('paymentMessage');
         const sandboxNote = document.getElementById('vnpaySandboxNote');
         const money = new Intl.NumberFormat('vi-VN');
+        const currencySymbol = '${appSettings.currency_symbol}';
 
         function refreshOptions() {
             const orderType = form.elements.orderType.value;
@@ -190,7 +191,7 @@
             pickupInput.required = isDeposit;
             if (sandboxNote) sandboxNote.hidden = paymentMethod !== 'vnpay';
             summary.innerHTML =
-                '<strong>Số tiền cần thanh toán: ' + money.format(amount) + '₫</strong>' +
+                '<strong>Số tiền cần thanh toán: ' + money.format(amount) + currencySymbol + '</strong>' +
                 '<small>' + (isDeposit ? 'Tiền cọc giữ hàng' : 'Toàn bộ giá trị đơn') +
                 ' · ' + (paymentMethod === 'cash' ? 'Tiền mặt' : 'VNPay') + '</small>';
             submitButton.querySelector('span').textContent =

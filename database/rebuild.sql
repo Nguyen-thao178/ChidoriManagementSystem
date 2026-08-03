@@ -691,11 +691,25 @@ VALUES
     ((SELECT id FROM dbo.users WHERE username = 'admin'),
      'store_name', N'Chidori Coffee', N'Tên cửa hàng'),
     ((SELECT id FROM dbo.users WHERE username = 'admin'),
+     'store_tagline', N'Thương hiệu cà phê rang xay nguyên chất', N'Mô tả ngắn của cửa hàng'),
+    ((SELECT id FROM dbo.users WHERE username = 'admin'),
+     'hotline', N'1900 1234', N'Số điện thoại hỗ trợ'),
+    ((SELECT id FROM dbo.users WHERE username = 'admin'),
+     'address', N'123 Đường Cà Phê, Quận 1, TP.HCM', N'Địa chỉ cửa hàng'),
+    ((SELECT id FROM dbo.users WHERE username = 'admin'),
+     'weekday_hours', N'Thứ 2 - Thứ 6: 7:00 - 21:00', N'Giờ mở cửa ngày trong tuần'),
+    ((SELECT id FROM dbo.users WHERE username = 'admin'),
+     'weekend_hours', N'Thứ 7 - CN: 8:00 - 22:00', N'Giờ mở cửa cuối tuần'),
+    ((SELECT id FROM dbo.users WHERE username = 'admin'),
+     'social_links', N'Facebook | Instagram | Tiktok', N'Các kênh mạng xã hội'),
+    ((SELECT id FROM dbo.users WHERE username = 'admin'),
      'currency', 'VND', N'Đơn vị tiền tệ'),
     ((SELECT id FROM dbo.users WHERE username = 'admin'),
      'barcode_scanner_enabled', 'true', N'Cho phép thêm sản phẩm bằng máy quét mã vạch'),
     ((SELECT id FROM dbo.users WHERE username = 'admin'),
-     'deposit_percent', '30', N'Phần trăm tiền cọc mặc định');
+     'deposit_percent', '30', N'Phần trăm tiền cọc mặc định'),
+    ((SELECT id FROM dbo.users WHERE username = 'admin'),
+     'loyalty_vnd_per_point', '1000', N'Số tiền chi tiêu để nhận một điểm');
 GO
 
 INSERT INTO dbo.contacts (user_id, name, position, phone, email, address, notes)

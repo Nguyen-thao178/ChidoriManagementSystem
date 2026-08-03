@@ -2,6 +2,7 @@ package com.cafe.servlet;
 
 import com.cafe.dao.OrderDAO;
 import com.cafe.model.User;
+import com.cafe.service.SystemSettingsService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -20,6 +21,8 @@ public class CartServlet extends HttpServlet {
         if (user != null) {
             req.setAttribute("pendingDepositCount", orderDAO.countPendingDeposits(user.getId()));
         }
+        req.setAttribute("barcodeScannerEnabled",
+                SystemSettingsService.getBoolean("barcode_scanner_enabled", true));
         req.getRequestDispatcher("/WEB-INF/views/cart.jsp").forward(req, resp);
     }
 }

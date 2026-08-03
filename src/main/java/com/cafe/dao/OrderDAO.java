@@ -3,6 +3,7 @@ package com.cafe.dao;
 import com.cafe.model.CartItem;
 import com.cafe.model.Order;
 import com.cafe.model.ReceiptItem;
+import com.cafe.service.SystemSettingsService;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -100,7 +101,8 @@ public class OrderDAO {
             conn.commit();
             if (!deposit) {
                 LoyaltyDAO loyaltyDAO = new LoyaltyDAO();
-                int pointsEarned = (int) (total / 1000);
+                int pointsEarned = (int) (total /
+                        SystemSettingsService.getPositiveInt("loyalty_vnd_per_point", 1000));
                 loyaltyDAO.addPoints(userId, pointsEarned, total);
             }
             return orderId;

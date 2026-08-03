@@ -15,6 +15,7 @@ Run these migrations in order:
 7. `migrations/V008_add_chat_history_report.sql`
 8. `migrations/V009_secure_payment_roles.sql`
 9. `migrations/V010_seed_staff_hierarchy.sql`
+10. `migrations/V011_functional_system_settings.sql`
 
 V006 is the current barcode format. It switches validation to EAN-13 and maps:
 

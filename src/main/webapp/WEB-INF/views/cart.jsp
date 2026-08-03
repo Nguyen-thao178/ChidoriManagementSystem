@@ -22,6 +22,7 @@
             </c:if>
         </a>
     </nav>
+    <c:if test="${barcodeScannerEnabled}">
     <section class="barcode-panel" aria-labelledby="barcode-title">
         <div>
             <h3 id="barcode-title">Quét mã vạch</h3>
@@ -37,6 +38,7 @@
         </form>
         <div id="scanStatus" class="scan-status" role="status" aria-live="polite"></div>
     </section>
+    </c:if>
     <c:choose>
         <c:when test="${empty sessionScope.cart or sessionScope.cart.size() == 0}">
             <p>Giỏ hàng trống. <a href="${pageContext.request.contextPath}/menu">Mua sắm ngay</a></p>
@@ -48,7 +50,7 @@
                 <c:forEach var="item" items="${sessionScope.cart}">
                     <tr>
                         <td>${item.product.name}</td>
-                        <td><fmt:formatNumber value="${item.discountedPrice}" type="number"/>₫</td>
+                        <td><fmt:formatNumber value="${item.discountedPrice}" type="number"/>${appSettings.currency_symbol}</td>
                         <td>
                             <form action="${pageContext.request.contextPath}/update-cart" method="post" style="display:inline;">
                                 <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
@@ -57,7 +59,7 @@
                                 <button type="submit" class="btn-outline" style="padding:0.2rem 0.5rem;">Cập nhật</button>
                             </form>
                          </td>
-                        <td><fmt:formatNumber value="${item.discountedPrice * item.quantity}" type="number"/>₫</td>
+                        <td><fmt:formatNumber value="${item.discountedPrice * item.quantity}" type="number"/>${appSettings.currency_symbol}</td>
                         <td>
                             <form action="${pageContext.request.contextPath}/remove-cart" method="post"
                                   class="inline-action">
@@ -70,7 +72,7 @@
                     </tr>
                 </c:forEach>
                 <tr class="total-row"><td colspan="3"><strong>Tổng cộng:</strong></td>
-                <td><strong><fmt:formatNumber value="${total}" type="number"/>₫</strong></td><td></td></tr>
+                <td><strong><fmt:formatNumber value="${total}" type="number"/>${appSettings.currency_symbol}</strong></td><td></td></tr>
             </table>
             <div class="cart-actions" style="margin-top:1rem;">
                 <a href="${pageContext.request.contextPath}/menu" class="btn">Tiếp tục mua</a>
@@ -83,6 +85,7 @@
 <script>
     (() => {
         const form = document.getElementById('barcodeForm');
+        if (!form) return;
         const input = document.getElementById('barcodeInput');
         const status = document.getElementById('scanStatus');
         const csrfToken = form.querySelector('input[name="_csrf"]')?.value || '';

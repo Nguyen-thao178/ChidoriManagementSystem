@@ -7,7 +7,7 @@
 <header>
     <div class="top-bar">
         <div class="logo">
-            <a href="${pageContext.request.contextPath}/home">☕ Chidori Coffee</a>
+            <a href="${pageContext.request.contextPath}/home">☕ <c:out value="${appSettings.store_name}"/></a>
         </div>
         <form class="search-form" action="${pageContext.request.contextPath}/search" method="get">
             <input type="text" name="keyword" placeholder="Tìm món, thức uống..." required>
