@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Quản lý sản phẩm - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-dark-espresso1">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-dark-mocha1">
 </head>
 <body>
 <%@ include file="/WEB-INF/views/header.jsp" %>

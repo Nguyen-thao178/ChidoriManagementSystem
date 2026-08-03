@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#0a0706">
     <title>Đăng nhập - Chidori Coffee</title>
     <link rel="stylesheet"
-          href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-dark-espresso1">
+          href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-dark-mocha1">
 </head>
 <body class="login-page login-centered-page">
 <div class="login-reference-background" aria-hidden="true">
