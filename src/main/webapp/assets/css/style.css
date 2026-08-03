@@ -638,17 +638,18 @@ footer {
 :root.light .search-form input { color: #41241c; }
 :root.light .search-form input::placeholder { color: #9a7a6d; }
 :root.light .navbar {
-    border-bottom-color: rgba(238, 110, 61, .22);
-    background: linear-gradient(100deg, #351914, #1f100d 72%);
-    box-shadow: 0 8px 25px rgba(51, 22, 15, .15);
+    border-bottom-color: rgba(96, 66, 55, .28);
+    background: linear-gradient(105deg, rgba(111, 80, 67, .97), rgba(86, 61, 52, .97));
+    box-shadow: 0 7px 22px rgba(72, 47, 38, .11);
 }
-:root.light .navbar a { color: #d9c3b8; }
-:root.light .navbar a:hover { color: #ff9368; }
+:root.light .navbar a { color: #f1e4de; }
+:root.light .navbar a:hover { color: #fff8f4; }
 :root.light .breadcrumb {
-    color: #c7aba0;
-    background: #25120f;
+    color: #eadbd4;
+    background: rgba(119, 91, 79, .96);
+    border-bottom: 1px solid rgba(92, 63, 52, .2);
 }
-:root.light .breadcrumb a { color: #ff8b5f; }
+:root.light .breadcrumb a { color: #ffe0d1; }
 :root.light .sidebar,
 :root.light .widget,
 :root.light .product-card,
@@ -663,6 +664,34 @@ footer {
     border-color: #e7cdbf;
     background: rgba(255, 249, 245, .82);
     box-shadow: 0 14px 38px rgba(83, 39, 26, .08);
+}
+:root.light .sidebar {
+    border-color: rgba(185, 145, 125, .38);
+    background: rgba(246, 235, 227, .78);
+    box-shadow: 0 16px 38px rgba(91, 55, 40, .075);
+    backdrop-filter: blur(12px);
+}
+:root.light .sidebar .widget {
+    padding: .15rem 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+:root.light .sidebar .widget + .widget {
+    margin-top: 1rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid rgba(184, 143, 122, .28);
+}
+:root.light .sidebar .widget h3 {
+    color: #c45737;
+}
+:root.light .sidebar .widget a,
+:root.light .sidebar .widget li {
+    color: #735a4f;
+}
+:root.light .sidebar .widget a:hover {
+    color: #a9472e;
 }
 :root.light .product-card:hover,
 :root.light .stat-card:hover {
@@ -689,13 +718,15 @@ footer {
     background: linear-gradient(110deg, rgba(230, 83, 47, .11), rgba(255,255,255,.15));
 }
 :root.light footer {
-    color: #d5bbb0;
+    color: #eadbd4;
+    border-top-color: rgba(116, 82, 68, .26);
     background:
-        radial-gradient(circle at 50% 0, rgba(226, 81, 44, .11), transparent 22rem),
-        #21100d;
+        radial-gradient(circle at 50% 0, rgba(255, 211, 191, .11), transparent 25rem),
+        linear-gradient(115deg, #72564a, #60473e 72%);
+    box-shadow: 0 -12px 35px rgba(75, 49, 39, .08);
 }
-:root.light footer h4 { color: #ff8054; }
-:root.light footer .copyright { color: #846c63; }
+:root.light footer h4 { color: #ffd0bc; }
+:root.light footer .copyright { color: #cbb7ae; }
 :root.light .chat-window {
     color-scheme: dark;
     --text-primary: #f0f0f0;
