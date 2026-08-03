@@ -85,6 +85,7 @@
         const form = document.getElementById('barcodeForm');
         const input = document.getElementById('barcodeInput');
         const status = document.getElementById('scanStatus');
+        const csrfToken = form.querySelector('input[name="_csrf"]')?.value || '';
         let submitting = false;
 
         const focusScanner = () => {
@@ -106,8 +107,12 @@
             try {
                 const response = await fetch(form.action, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
-                    body: new URLSearchParams({barcode})
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'Accept': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: new URLSearchParams({barcode, _csrf: csrfToken})
                 });
                 if (response.redirected) {
                     window.location.href = response.url;
@@ -129,6 +134,13 @@
             input.value = '';
             submitting = false;
             focusScanner();
+        });
+
+        input.addEventListener('keydown', (event) => {
+            if ((event.key === 'Enter' || event.key === 'Tab') && input.value.trim()) {
+                event.preventDefault();
+                form.requestSubmit();
+            }
         });
 
         document.addEventListener('click', (event) => {
