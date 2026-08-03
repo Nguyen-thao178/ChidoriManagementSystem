@@ -15,9 +15,22 @@
     <%@ include file="sidebar.jsp" %>
     <main class="main-content">
         <div class="slider-container">
-            <div class="slide active"><img src="https://picsum.photos/id/104/1200/400" alt="Slider 1"></div>
-            <div class="slide"><img src="https://picsum.photos/id/106/1200/400" alt="Slider 2"></div>
-            <div class="slide"><img src="https://picsum.photos/id/107/1200/400" alt="Slider 3"></div>
+            <c:choose>
+                <c:when test="${not empty featuredProducts}">
+                    <c:forEach var="sliderProduct" items="${featuredProducts}" varStatus="slideStatus">
+                        <div class="slide ${slideStatus.first ? 'active' : ''}">
+                            <img src="${sliderProduct.imageUrl}"
+                                 alt="${sliderProduct.name}">
+                        </div>
+                    </c:forEach>
+                </c:when>
+                <c:otherwise>
+                    <div class="slide active">
+                        <img src="${pageContext.request.contextPath}/assets/images/caphesua.jpeg"
+                             alt="Cà phê sữa">
+                    </div>
+                </c:otherwise>
+            </c:choose>
             <button class="prev">&#10094;</button>
             <button class="next">&#10095;</button>
         </div>
