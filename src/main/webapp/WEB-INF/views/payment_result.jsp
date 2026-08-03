@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Kết quả thanh toán - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-light-polish1">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-dark-espresso1">
 </head>
 <body>
 <%@ include file="header.jsp" %>

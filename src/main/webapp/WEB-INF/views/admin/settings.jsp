@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cài đặt hệ thống - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-light-polish1">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-dark-espresso1">
     <style>
         .settings-page { max-width: 1080px; margin: 2rem auto; padding: 0 1rem 3rem; }
         .settings-hero { display:flex; justify-content:space-between; gap:1.5rem; align-items:end;
