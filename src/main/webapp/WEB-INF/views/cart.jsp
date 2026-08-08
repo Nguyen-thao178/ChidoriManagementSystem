@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Giỏ hàng - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-role-permissions1">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260809-chat-cart1">
 </head>
 <body>
 <%@ include file="header.jsp" %>
@@ -22,7 +22,7 @@
             </c:if>
         </a>
     </nav>
-    <c:if test="${barcodeScannerEnabled}">
+    <c:if test="${barcodeScannerEnabled && currentRole == 'staff'}">
     <section class="barcode-panel" aria-labelledby="barcode-title">
         <div>
             <h3 id="barcode-title">Quét mã vạch</h3>
@@ -76,7 +76,9 @@
             </table>
             <div class="cart-actions" style="margin-top:1rem;">
                 <a href="${pageContext.request.contextPath}/menu" class="btn">Tiếp tục mua</a>
-                <a href="${pageContext.request.contextPath}/checkout" class="btn-primary">Thanh toán</a>
+                <a href="${pageContext.request.contextPath}/checkout" class="btn-primary">
+                    ${currentRole == 'customer' || currentRole == 'member' ? 'Đặt hàng' : 'Thanh toán'}
+                </a>
             </div>
         </c:otherwise>
     </c:choose>

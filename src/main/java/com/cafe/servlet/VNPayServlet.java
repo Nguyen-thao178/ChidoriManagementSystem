@@ -5,6 +5,7 @@ import com.cafe.model.Payment;
 import com.cafe.model.User;
 import com.cafe.payment.VNPayCallbackService;
 import com.cafe.payment.VNPayConfig;
+import com.cafe.security.RoleAccessPolicy;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,9 +51,18 @@ public class VNPayServlet extends HttpServlet {
 
         try {
             Payment payment = paymentDAO.getPendingPaymentForUser(paymentId, user.getId());
+            if (payment == null && RoleAccessPolicy.isStaff(user)) {
+                payment = paymentDAO.getPendingCustomerBalancePaymentForStaff(paymentId);
+            }
             if (payment == null) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND,
                         "Không tìm thấy giao dịch đang chờ.");
+                return;
+            }
+            if (RoleAccessPolicy.isCustomer(user)
+                    && !"deposit".equals(payment.getOrderType())) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                        "Tài khoản khách hàng chỉ được thanh toán tiền cọc.");
                 return;
             }
 

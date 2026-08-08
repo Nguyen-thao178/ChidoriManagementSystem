@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đơn Hàng Cọc - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-role-permissions1">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260809-chat-cart1">
 </head>
 <body>
 <%@ include file="header.jsp" %>
@@ -15,8 +15,8 @@
     <div class="page-heading deposit-page-heading">
         <div>
             <span class="section-kicker">DEPOSIT WORKSPACE</span>
-            <h2>Đơn hàng <em>đã cọc.</em></h2>
-            <p>Theo dõi lịch nhận hàng và xử lý đơn trên một màn hình.</p>
+            <h2><c:choose><c:when test="${staffDepositView}">Đơn cọc <em>của khách hàng.</em></c:when><c:otherwise>Đơn cọc <em>của tôi.</em></c:otherwise></c:choose></h2>
+            <p><c:choose><c:when test="${staffDepositView}">Theo dõi lịch nhận và xử lý các đơn Customer đã đặt cọc.</c:when><c:otherwise>Bạn chỉ nhìn thấy các đơn đặt cọc thuộc tài khoản của mình.</c:otherwise></c:choose></p>
         </div>
         <a href="${pageContext.request.contextPath}/cart" class="btn deposit-back-btn">← Về giỏ hàng</a>
     </div>
@@ -78,6 +78,11 @@
                                     </c:otherwise>
                                 </c:choose>
                             </div>
+                            <c:if test="${staffDepositView}">
+                                <p class="deposit-method"><span>Khách hàng</span>
+                                    <strong><c:out value="${order.customerName}"/> (@<c:out value="${order.customerUsername}"/>)</strong>
+                                </p>
+                            </c:if>
                             <div class="deposit-pickup-date">
                                 <span>📅</span>
                                 <div><small>NGÀY NHẬN HÀNG</small>
@@ -95,7 +100,7 @@
                                 🖨 In phiếu cọc
                             </a>
 
-                            <c:if test="${order.status == 'deposit_pending'}">
+                            <c:if test="${staffDepositView && order.status == 'deposit_pending'}">
                                 <form action="${pageContext.request.contextPath}/deposit-orders" method="post"
                                       onsubmit="return confirm('Xác nhận khách đã nhận hàng và thanh toán phần còn lại?');">
                                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">

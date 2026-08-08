@@ -12,6 +12,8 @@ public class Order {
     private double depositAmount;
     private Date pickupDate;
     private String pickupStatus;
+    private String customerName;
+    private String customerUsername;
     // getters/setters
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -33,6 +35,10 @@ public class Order {
     public void setPickupDate(Date pickupDate) { this.pickupDate = pickupDate; }
     public String getPickupStatus() { return pickupStatus; }
     public void setPickupStatus(String pickupStatus) { this.pickupStatus = pickupStatus; }
+    public String getCustomerName() { return customerName; }
+    public void setCustomerName(String customerName) { this.customerName = customerName; }
+    public String getCustomerUsername() { return customerUsername; }
+    public void setCustomerUsername(String customerUsername) { this.customerUsername = customerUsername; }
 
     public String getTransactionTag() {
         if ("direct".equals(orderType)) {

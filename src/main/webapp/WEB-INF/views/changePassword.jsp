@@ -157,7 +157,7 @@
         <button type="submit" class="btn-change">💾 Cập nhật mật khẩu</button>
     </form>
 
-    <a href="${pageContext.request.contextPath}/home" class="btn-back">⬅️ Quay lại trang chủ</a>
+    <a href="${homePath}" class="btn-back">⬅️ Quay lại trang chính</a>
 </div>
 
 <%@ include file="footer.jsp" %>

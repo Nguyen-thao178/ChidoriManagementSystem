@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lịch sử giao dịch - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-role-permissions1">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260809-chat-cart1">
 </head>
 <body>
 <%@ include file="header.jsp" %>
@@ -15,17 +15,21 @@
     <div class="page-heading">
         <div>
             <h2>📜 Lịch sử giao dịch</h2>
-            <p>Theo dõi thanh toán trực tiếp và toàn bộ vòng đời đơn đặt cọc.</p>
+            <p>${viewingAllOrders
+                    ? 'Theo dõi lịch sử giao dịch của toàn bộ nhân viên.'
+                    : 'Theo dõi thanh toán trực tiếp và toàn bộ vòng đời đơn đặt cọc.'}</p>
         </div>
         <div>
-            <a href="${pageContext.request.contextPath}/deposit-orders" class="btn">📅 Đơn Hàng Cọc</a>
+            <c:if test="${not viewingAllOrders}">
+                <a href="${pageContext.request.contextPath}/deposit-orders" class="btn">📅 Đơn Hàng Cọc</a>
+            </c:if>
             <a href="${pageContext.request.contextPath}/export-history" class="btn-primary">📄 Xuất PDF</a>
         </div>
     </div>
 
     <c:choose>
         <c:when test="${empty orderList}">
-            <p>Bạn chưa có giao dịch nào.</p>
+            <p>${viewingAllOrders ? 'Hệ thống chưa có giao dịch nào.' : 'Bạn chưa có giao dịch nào.'}</p>
         </c:when>
         <c:otherwise>
             <div class="table-scroll">

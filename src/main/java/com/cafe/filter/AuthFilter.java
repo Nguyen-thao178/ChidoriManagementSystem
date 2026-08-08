@@ -1,6 +1,7 @@
 package com.cafe.filter;
 
 import com.cafe.model.User;
+import com.cafe.security.RoleAccessPolicy;
 import com.cafe.service.SystemSettingsService;
 import com.cafe.utils.CsrfUtil;
 import jakarta.servlet.Filter;
@@ -67,17 +68,14 @@ public class AuthFilter implements Filter {
             return;
         }
 
-        if (uri.startsWith(contextPath + "/admin")) {
-            boolean users = uri.startsWith(contextPath + "/admin/users");
-            boolean products = uri.startsWith(contextPath + "/admin/products");
-            boolean managerArea = users || products;
-            boolean allowed = "admin".equalsIgnoreCase(user.getRole())
-                    || (managerArea && "manager".equalsIgnoreCase(user.getRole()));
-            if (!allowed) {
-                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập trang quản trị.");
-                return;
-            }
+        String requestPath = uri.substring(contextPath.length());
+        if (!RoleAccessPolicy.canAccess(user, requestPath)) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Tài khoản của bạn không có quyền thực hiện chức năng này.");
+            return;
         }
+
+        req.setAttribute("homePath", contextPath + RoleAccessPolicy.landingPath(user));
 
         chain.doFilter(req, resp);
     }

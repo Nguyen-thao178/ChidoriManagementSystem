@@ -5,6 +5,7 @@ import com.cafe.dao.PaymentDAO;
 import com.cafe.model.Order;
 import com.cafe.model.Payment;
 import com.cafe.model.User;
+import com.cafe.security.RoleAccessPolicy;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -34,7 +35,11 @@ public class DepositOrdersServlet extends HttpServlet {
             getServletContext().log("Không thể cập nhật đơn cọc quá hạn", e);
         }
 
-        List<Order> orders = orderDAO.getDepositOrdersByUserId(user.getId());
+        boolean staffView = RoleAccessPolicy.isStaff(user);
+        List<Order> orders = staffView
+                ? orderDAO.getCustomerDepositOrders()
+                : orderDAO.getDepositOrdersByUserId(user.getId());
+        req.setAttribute("staffDepositView", staffView);
         req.setAttribute("depositOrders", orders);
         req.getRequestDispatcher("/WEB-INF/views/deposit_orders.jsp").forward(req, resp);
     }
@@ -47,12 +52,17 @@ public class DepositOrdersServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
+        if (!RoleAccessPolicy.canProcessCustomerDeposit(user)) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Khách hàng chỉ được xem đơn cọc của mình.");
+            return;
+        }
 
         try {
             int orderId = Integer.parseInt(req.getParameter("orderId"));
             String paymentMethod = req.getParameter("balancePaymentMethod");
-            Payment payment = paymentDAO.createBalancePayment(
-                    orderId, user.getId(), paymentMethod);
+            Payment payment = paymentDAO.createBalancePaymentForCustomerOrder(
+                    orderId, paymentMethod);
             if ("vnpay".equals(paymentMethod)) {
                 resp.sendRedirect(req.getContextPath() + "/vnpay-pay?paymentId="
                         + payment.getId());

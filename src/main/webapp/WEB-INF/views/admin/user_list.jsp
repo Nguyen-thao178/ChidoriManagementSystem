@@ -28,27 +28,15 @@
                     <td>${u.email}</td>
                     <td>${u.role}</td>
                     <td>
-                        <c:choose>
-                            <c:when test="${sessionScope.user.role == 'admin'
-                                    || u.role == 'staff' || u.role == 'customer'}">
-                                <a href="?action=edit&id=${u.id}">✏️ Sửa</a>
-                                <c:if test="${sessionScope.user.id != u.id}">
-                                    <form method="post" action="${pageContext.request.contextPath}/admin/users"
-                                          class="inline-action"
-                                          onsubmit="return confirm('Xóa nhân viên này?');">
-                                        <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
-                                        <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="id" value="${u.id}">
-                                        <button type="submit" class="link-button">🗑️ Xóa</button>
-                                    </form>
-                                </c:if>
-                            </c:when>
-                            <c:otherwise>
-                                <span class="permission-locked" title="Manager không thể chỉnh sửa tài khoản cấp trên">
-                                    🔒 Không có quyền
-                                </span>
-                            </c:otherwise>
-                        </c:choose>
+                        <a href="?action=edit&id=${u.id}">✏️ Sửa</a>
+                        <form method="post" action="${pageContext.request.contextPath}/admin/users"
+                              class="inline-action"
+                              onsubmit="return confirm('Xóa nhân viên này?');">
+                            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="id" value="${u.id}">
+                            <button type="submit" class="link-button">🗑️ Xóa</button>
+                        </form>
                     </td>
                 </tr>
             </c:forEach>

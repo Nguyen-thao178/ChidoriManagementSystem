@@ -3,6 +3,8 @@ package com.cafe.servlet;
 import com.cafe.service.CartService;
 import com.cafe.service.CartService.AddResult;
 import com.cafe.service.SystemSettingsService;
+import com.cafe.model.User;
+import com.cafe.security.RoleAccessPolicy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -23,6 +25,17 @@ public class BarcodeCartServlet extends HttpServlet {
         req.setCharacterEncoding("UTF-8");
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
+
+        User user = (User) req.getSession().getAttribute("user");
+        if (!RoleAccessPolicy.isStaff(user)) {
+            resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            objectMapper.writeValue(resp.getWriter(), Map.of(
+                    "success", false,
+                    "code", "SCANNER_FORBIDDEN",
+                    "message", "Tài khoản Customer chỉ được chọn món và bấm Đặt hàng; không được quét mã."
+            ));
+            return;
+        }
 
         if (!SystemSettingsService.getBoolean("barcode_scanner_enabled", true)) {
             resp.setStatus(HttpServletResponse.SC_FORBIDDEN);

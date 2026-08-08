@@ -2,6 +2,7 @@ package com.cafe.servlet;
 
 import com.cafe.dao.UserDAO;
 import com.cafe.model.User;
+import com.cafe.security.RoleAccessPolicy;
 import com.cafe.utils.PasswordUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -22,7 +23,8 @@ public class LoginServlet extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = req.getSession(false);
         if (session != null && session.getAttribute("user") != null) {
-            resp.sendRedirect(req.getContextPath() + "/home");
+            User user = (User) session.getAttribute("user");
+            resp.sendRedirect(req.getContextPath() + RoleAccessPolicy.landingPath(user));
             return;
         }
         req.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(req, resp);
@@ -56,7 +58,7 @@ public class LoginServlet extends HttpServlet {
                         user.setPasswordHash(upgradedHash);
                     }
                     session.setAttribute("user", user);
-                    resp.sendRedirect(req.getContextPath() + "/home");
+                    resp.sendRedirect(req.getContextPath() + RoleAccessPolicy.landingPath(user));
                     return;
                 }
             }

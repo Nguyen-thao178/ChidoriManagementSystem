@@ -30,7 +30,11 @@ public class OrderHistoryServlet extends HttpServlet {
         } catch (Exception e) {
             getServletContext().log("Không thể cập nhật đơn cọc quá hạn", e);
         }
-        List<Order> orders = orderDAO.getOrdersByUserId(user.getId());
+        boolean viewingAllOrders = "manager".equalsIgnoreCase(user.getRole());
+        List<Order> orders = viewingAllOrders
+                ? orderDAO.getAllOrders()
+                : orderDAO.getOrdersByUserId(user.getId());
+        req.setAttribute("viewingAllOrders", viewingAllOrders);
         req.setAttribute("orderList", orders);
         req.getRequestDispatcher("/WEB-INF/views/history.jsp").forward(req, resp);
     }

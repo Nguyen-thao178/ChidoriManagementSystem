@@ -4,32 +4,43 @@
     window.contextPath = "${pageContext.request.contextPath}";
     window.CHIDORI_CSRF = "${sessionScope.csrfToken}";
 </script>
+<c:set var="currentRole" value="${sessionScope.user.role}"/>
+<c:set var="headerCartQuantity" value="0"/>
+<c:forEach var="headerCartItem" items="${sessionScope.cart}">
+    <c:set var="headerCartQuantity" value="${headerCartQuantity + headerCartItem.quantity}"/>
+</c:forEach>
 <header>
     <div class="top-bar">
         <div class="logo">
-            <a href="${pageContext.request.contextPath}/home">☕ <c:out value="${appSettings.store_name}"/></a>
+            <a href="${homePath}">☕ <c:out value="${appSettings.store_name}"/></a>
         </div>
-        <form class="search-form" action="${pageContext.request.contextPath}/search" method="get">
-            <input type="text" name="keyword" placeholder="Tìm món, thức uống..." required>
-            <button type="submit">🔍</button>
-        </form>
+        <c:if test="${currentRole == 'staff' || currentRole == 'customer' || currentRole == 'member'}">
+            <form class="search-form" action="${pageContext.request.contextPath}/search" method="get">
+                <input type="text" name="keyword" placeholder="Tìm món, thức uống..." required>
+                <button type="submit">🔍</button>
+            </form>
+        </c:if>
         <div class="user-actions">
             <button id="themeToggle" class="theme-toggle" type="button"
                     aria-label="Chuyển giao diện sáng/tối">🌙</button>
             <c:if test="${not empty sessionScope.user}">
                 <span>🧑‍💼 ${sessionScope.user.fullname} (${sessionScope.user.role})</span>
-                <!-- ⭐ Lịch sử đơn hàng cho TẤT CẢ user (kể cả staff) -->
-                <a href="${pageContext.request.contextPath}/history">📜 Lịch sử</a>
-                <a href="${pageContext.request.contextPath}/deposit-orders">📅 Đơn Hàng Cọc</a>
-                <!-- ⭐ Điểm thưởng cho tất cả -->
-                <a href="${pageContext.request.contextPath}/loyalty">🎖️ Điểm thưởng</a>
-                <!-- Đổi mật khẩu cho tất cả -->
+                <c:if test="${currentRole == 'staff' || currentRole == 'customer'
+                        || currentRole == 'member' || currentRole == 'manager'}">
+                    <a href="${pageContext.request.contextPath}/history">📜 Lịch sử</a>
+                </c:if>
+                <c:if test="${currentRole == 'staff' || currentRole == 'customer' || currentRole == 'member'}">
+                    <a href="${pageContext.request.contextPath}/deposit-orders">📅 Đơn Hàng Cọc</a>
+                </c:if>
+                <c:if test="${currentRole == 'staff' || currentRole == 'customer' || currentRole == 'member'}">
+                    <a href="${pageContext.request.contextPath}/loyalty">🎖️ <c:choose><c:when test="${currentRole == 'staff'}">Khách thành viên</c:when><c:when test="${currentRole == 'customer'}">Đăng ký thành viên</c:when><c:otherwise>Điểm & Voucher</c:otherwise></c:choose></a>
+                </c:if>
                 <a href="${pageContext.request.contextPath}/change-password">🔑 Đổi mật khẩu</a>
-                <a href="${pageContext.request.contextPath}/cart">🛒 Giỏ 
-                    <c:if test="${not empty sessionScope.cart}">
-                        (${sessionScope.cart.size()})
-                    </c:if>
-                </a>
+                <c:if test="${currentRole == 'staff' || currentRole == 'customer' || currentRole == 'member'}">
+                    <a href="${pageContext.request.contextPath}/cart" id="headerCartLink">🛒 Giỏ
+                        <span id="headerCartCount" class="header-cart-count ${headerCartQuantity == 0 ? 'is-empty' : ''}">${headerCartQuantity}</span>
+                    </a>
+                </c:if>
                 <form action="${pageContext.request.contextPath}/logout" method="post" class="inline-action">
                     <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
                     <button type="submit" class="link-button">🚪 Đăng xuất</button>
@@ -38,27 +49,25 @@
         </div>
     </div>
     <nav class="navbar">
-        <a href="${pageContext.request.contextPath}/home">🏠 Trang chủ</a>
-        <a href="${pageContext.request.contextPath}/menu">📋 Menu</a>
-        <a href="${pageContext.request.contextPath}/promotion">🎁 Khuyến mãi</a>
-        <a href="${pageContext.request.contextPath}/contact">📞 Liên hệ</a>
-        <!-- Chỉ admin mới thấy các link quản trị -->
-        <c:if test="${sessionScope.user.role == 'admin'}">
+        <c:if test="${currentRole == 'staff' || currentRole == 'customer' || currentRole == 'member'}">
+            <a href="${pageContext.request.contextPath}/home">🏠 Trang chủ</a>
+            <a href="${pageContext.request.contextPath}/menu">📋 Menu</a>
+            <a href="${pageContext.request.contextPath}/promotion">🎁 Khuyến mãi</a>
+        </c:if>
+        <c:if test="${currentRole == 'admin'}">
+            <a href="${pageContext.request.contextPath}/admin/report">📊 Báo cáo</a>
+            <a href="${pageContext.request.contextPath}/admin/contacts">📞 Quản lý liên hệ</a>
+            <a href="${pageContext.request.contextPath}/admin/settings">⚙️ Cài đặt</a>
+        </c:if>
+        <c:if test="${currentRole == 'manager'}">
             <a href="${pageContext.request.contextPath}/admin/users">👥 Quản lý nhân viên</a>
             <a href="${pageContext.request.contextPath}/admin/products">📦 Quản lý menu</a>
             <a href="${pageContext.request.contextPath}/admin/report">📊 Báo cáo</a>
-            <a href="${pageContext.request.contextPath}/admin/settings">⚙️ Cài đặt</a>
-            <a href="${pageContext.request.contextPath}/register-member">➕ Đăng ký thành viên</a>
-        </c:if>
-        <!-- Manager quản lý nhân viên cấp dưới, menu và báo cáo. -->
-        <c:if test="${sessionScope.user.role == 'manager'}">
-            <a href="${pageContext.request.contextPath}/admin/users">👥 Quản lý nhân viên</a>
-            <a href="${pageContext.request.contextPath}/admin/products">📦 Quản lý menu</a>
         </c:if>
     </nav>
     <div class="breadcrumb">
         <c:set var="uri" value="${pageContext.request.requestURI}"/>
-        <a href="${pageContext.request.contextPath}/home">Trang chủ</a> &gt;
+        <a href="${homePath}">Trang chính</a> &gt;
         <c:choose>
             <c:when test="${uri.contains('/menu')}">Menu</c:when>
             <c:when test="${uri.contains('/cart')}">Giỏ hàng</c:when>

@@ -45,8 +45,8 @@ public class OrderDAO {
             double depositAmount = deposit ? paidAmount : 0;
 
             String sqlOrder = "INSERT INTO orders " +
-                    "(user_id, total_amount, status, order_type, payment_method, deposit_amount, pickup_date, pickup_status, completed_at) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "(user_id, total_amount, status, order_type, payment_method, deposit_amount, pickup_date, pickup_status, completed_at, gross_amount) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             psOrder = conn.prepareStatement(sqlOrder, Statement.RETURN_GENERATED_KEYS);
             psOrder.setInt(1, userId);
             psOrder.setDouble(2, total);
@@ -57,6 +57,7 @@ public class OrderDAO {
             psOrder.setDate(7, pickupDate);
             psOrder.setString(8, pickupStatus);
             psOrder.setTimestamp(9, deposit ? null : new Timestamp(System.currentTimeMillis()));
+            psOrder.setDouble(10, total);
             psOrder.executeUpdate();
 
             generatedKeys = psOrder.getGeneratedKeys();
@@ -142,6 +143,19 @@ public class OrderDAO {
         return orders;
     }
 
+    public List<Order> getAllOrders() {
+        List<Order> orders = new ArrayList<>();
+        String sql = "SELECT * FROM orders ORDER BY order_date DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) orders.add(mapOrder(rs));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return orders;
+    }
+
     public Order getOrderByIdAndUserId(int orderId, int userId) throws SQLException {
         String sql = "SELECT * FROM orders WHERE id = ? AND user_id = ?";
         try (Connection conn = DBConnection.getConnection();
@@ -150,6 +164,35 @@ public class OrderDAO {
             ps.setInt(2, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? mapOrder(rs) : null;
+            }
+        }
+    }
+
+    public Order getOrderById(int orderId) throws SQLException {
+        String sql = "SELECT * FROM orders WHERE id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapOrder(rs) : null;
+            }
+        }
+    }
+
+    public Order getCustomerDepositOrderById(int orderId) throws SQLException {
+        String sql = "SELECT o.*, u.fullname AS customer_name, u.username AS customer_username " +
+                "FROM orders o INNER JOIN users u ON u.id = o.user_id " +
+                "WHERE o.id = ? AND o.order_type = 'deposit' " +
+                "AND LOWER(u.role) IN ('customer', 'member')";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                Order order = mapOrder(rs);
+                order.setCustomerName(rs.getString("customer_name"));
+                order.setCustomerUsername(rs.getString("customer_username"));
+                return order;
             }
         }
     }
@@ -178,6 +221,28 @@ public class OrderDAO {
         return items;
     }
 
+    public List<ReceiptItem> getReceiptItems(int orderId) throws SQLException {
+        List<ReceiptItem> items = new ArrayList<>();
+        String sql = "SELECT p.name, oi.quantity, oi.price " +
+                "FROM order_items oi " +
+                "INNER JOIN products p ON p.id = oi.product_id " +
+                "WHERE oi.order_id = ? ORDER BY oi.id";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    items.add(new ReceiptItem(
+                            rs.getString("name"),
+                            rs.getInt("quantity"),
+                            rs.getDouble("price")
+                    ));
+                }
+            }
+        }
+        return items;
+    }
+
     public List<Order> getDepositOrdersByUserId(int userId) {
         List<Order> orders = new ArrayList<>();
         String sql = "SELECT * FROM orders WHERE user_id = ? AND order_type = 'deposit' " +
@@ -187,6 +252,28 @@ public class OrderDAO {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) orders.add(mapOrder(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return orders;
+    }
+
+    public List<Order> getCustomerDepositOrders() {
+        List<Order> orders = new ArrayList<>();
+        String sql = "SELECT o.*, u.fullname AS customer_name, u.username AS customer_username " +
+                "FROM orders o INNER JOIN users u ON u.id = o.user_id " +
+                "WHERE o.order_type = 'deposit' AND LOWER(u.role) IN ('customer', 'member') " +
+                "ORDER BY CASE WHEN o.status = 'deposit_pending' THEN 0 ELSE 1 END, " +
+                "o.pickup_date, o.order_date DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Order order = mapOrder(rs);
+                order.setCustomerName(rs.getString("customer_name"));
+                order.setCustomerUsername(rs.getString("customer_username"));
+                orders.add(order);
             }
         } catch (SQLException e) {
             e.printStackTrace();

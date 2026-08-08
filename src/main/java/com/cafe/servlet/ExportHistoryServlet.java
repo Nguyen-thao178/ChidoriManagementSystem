@@ -34,10 +34,14 @@ public class ExportHistoryServlet extends HttpServlet {
         }
 
         OrderDAO orderDAO = new OrderDAO();
-        List<Order> orders = orderDAO.getOrdersByUserId(user.getId());
+        boolean viewingAllOrders = "manager".equalsIgnoreCase(user.getRole());
+        List<Order> orders = viewingAllOrders
+                ? orderDAO.getAllOrders()
+                : orderDAO.getOrdersByUserId(user.getId());
 
         resp.setContentType("application/pdf");
-        resp.setHeader("Content-Disposition", "attachment; filename=lich_su_thanh_toan_" + user.getUsername() + ".pdf");
+        String fileScope = viewingAllOrders ? "tat_ca" : user.getUsername();
+        resp.setHeader("Content-Disposition", "attachment; filename=lich_su_thanh_toan_" + fileScope + ".pdf");
 
         try {
             Document document = new Document(PageSize.A4.rotate());

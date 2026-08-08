@@ -117,8 +117,7 @@ public class ProductManagementServlet extends HttpServlet {
 
     private boolean canManageMenu(HttpServletRequest req) {
         User user = (User) req.getSession().getAttribute("user");
-        return user != null && ("admin".equalsIgnoreCase(user.getRole())
-                || "manager".equalsIgnoreCase(user.getRole()));
+        return user != null && "manager".equalsIgnoreCase(user.getRole());
     }
 
     private Integer parsePositiveInt(String value) {

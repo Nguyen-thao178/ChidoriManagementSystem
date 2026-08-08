@@ -51,7 +51,7 @@
             <span class="chat-welcome-icon">☕</span>
             <span class="chat-welcome-kicker">Xin chào từ Chidori</span>
             <h3>Mình có thể giúp gì cho bạn?</h3>
-            <p>Hỏi nhanh về menu, giá món, mã vạch, thanh toán và đơn hàng đã cọc.</p>
+            <p>Hỏi nhanh về menu, giá món, thêm món vào giỏ và đơn hàng đã cọc.</p>
         </section>
         <div class="chat-message bot-message">
             <span class="message-avatar">C</span>
@@ -61,6 +61,11 @@
             </div>
         </div>
         <div class="chat-suggestions" id="chatSuggestions" aria-label="Câu hỏi gợi ý">
+            <c:if test="${currentRole == 'staff' || currentRole == 'customer' || currentRole == 'member'}">
+                <button type="button" data-chat-suggestion="Thêm cà phê sữa vào giỏ">
+                    <span>🛒</span><strong>Thêm vào giỏ</strong><small>Đặt món bằng chat</small>
+                </button>
+            </c:if>
             <button type="button" data-chat-suggestion="Cho mình xem menu và giá món">
                 <span>☕</span><strong>Menu &amp; giá</strong><small>Xem món đang bán</small>
             </button>
@@ -94,4 +99,4 @@
         </div>
     </div>
 </aside>
-<script src="${pageContext.request.contextPath}/assets/js/main.js?v=20260803-coffee-ambient1"></script>
+<script src="${pageContext.request.contextPath}/assets/js/main.js?v=20260809-chat-cart2"></script>

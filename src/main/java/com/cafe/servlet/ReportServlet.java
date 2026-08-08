@@ -20,9 +20,10 @@ public class ReportServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         User user = (User) req.getSession().getAttribute("user");
-        if (user == null || !"admin".equalsIgnoreCase(user.getRole())) {
+        if (user == null || !("admin".equalsIgnoreCase(user.getRole())
+                || "manager".equalsIgnoreCase(user.getRole()))) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Chỉ Admin được phép xem báo cáo.");
+                    "Chỉ Admin hoặc Quản lý được phép xem báo cáo.");
             return;
         }
 

@@ -43,4 +43,35 @@ class GeminiServiceTest {
     void returnsNullWhenCandidateHasNoParts() throws Exception {
         assertNull(GeminiService.extractText(mapper.readTree("{\"candidates\":[]}")));
     }
+
+    @Test
+    void excludesGeminiThoughtPartsFromCustomerReply() throws Exception {
+        String json = """
+                {
+                  "candidates": [{
+                    "content": {"parts": [
+                      {"thought": true, "text": "Friendly, polite? Yes. Accurate to database? Yes."},
+                      {"text": "Chidori hiện có cà phê sữa và cà phê đen ạ."}
+                    ]}
+                  }]
+                }
+                """;
+
+        assertEquals("Chidori hiện có cà phê sữa và cà phê đen ạ.",
+                GeminiService.extractText(mapper.readTree(json)));
+    }
+
+    @Test
+    void detectsInternalEvaluationText() {
+        assertTrue(GeminiService.looksLikeInternalEvaluation(
+                "Friendly, polite? Yes. Accurate to database? Yes."));
+        assertTrue(!GeminiService.looksLikeInternalEvaluation(
+                "Chidori hiện có cà phê sữa và cà phê đen ạ."));
+    }
+
+    @Test
+    void removesMarkdownMarkersBeforeRenderingAsPlainText() {
+        assertEquals("Cà phê sữa: 25.000₫",
+                GeminiService.cleanCustomerReply("**Cà phê sữa**: `25.000₫`"));
+    }
 }

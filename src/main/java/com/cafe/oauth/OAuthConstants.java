@@ -1,5 +1,7 @@
 package com.cafe.oauth;
 
+import com.cafe.config.RuntimeSecrets;
+
 public final class OAuthConstants {
     public static final String GOOGLE_CLIENT_ID = configured("GOOGLE_OAUTH_CLIENT_ID");
     public static final String GOOGLE_CLIENT_SECRET = configured("GOOGLE_OAUTH_CLIENT_SECRET");
@@ -49,8 +51,6 @@ public final class OAuthConstants {
     }
 
     private static String configured(String name, String defaultValue) {
-        String value = System.getenv(name);
-        if (value == null || value.isBlank()) value = System.getProperty(name);
-        return value == null || value.isBlank() ? defaultValue : value.trim();
+        return RuntimeSecrets.valueOrDefault(name, defaultValue);
     }
 }

@@ -40,12 +40,7 @@
 
         <label>Vai trò:</label>
         <select name="role" required>
-            <c:if test="${not managerLimited}">
-                <option value="admin" ${user.role == 'admin' ? 'selected' : ''}>Admin</option>
-                <option value="manager" ${user.role == 'manager' ? 'selected' : ''}>Manager</option>
-            </c:if>
-            <option value="staff" ${user.role == 'staff' ? 'selected' : ''}>Staff</option>
-            <option value="customer" ${user.role == 'customer' ? 'selected' : ''}>Customer</option>
+            <option value="staff" ${user.role == 'staff' ? 'selected' : ''}>Nhân viên</option>
         </select>
 
         <button type="submit" class="btn-primary">💾 Lưu</button>

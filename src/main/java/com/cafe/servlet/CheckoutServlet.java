@@ -2,11 +2,15 @@ package com.cafe.servlet;
 
 import com.cafe.dao.OrderDAO;
 import com.cafe.dao.PaymentDAO;
+import com.cafe.dao.LoyaltyDAO;
 import com.cafe.model.CartItem;
+import com.cafe.model.LoyaltyPoint;
 import com.cafe.model.Payment;
 import com.cafe.model.User;
 import com.cafe.payment.VNPayConfig;
+import com.cafe.security.RoleAccessPolicy;
 import com.cafe.service.SystemSettingsService;
+import com.cafe.service.LoyaltyVoucherService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -31,6 +35,14 @@ public class CheckoutServlet extends HttpServlet {
         req.setAttribute("depositPercent",
                 SystemSettingsService.getPositiveInt("deposit_percent", 30));
         req.setAttribute("vnpaySandbox", VNPayConfig.isSandbox());
+        User user = (User) req.getSession().getAttribute("user");
+        req.setAttribute("customerDepositOnly", RoleAccessPolicy.isCustomer(user));
+        boolean member = user != null && "member".equalsIgnoreCase(user.getRole());
+        int pointValue = SystemSettingsService.getPositiveInt("loyalty_vnd_per_point", 1000);
+        LoyaltyPoint loyalty = member ? new LoyaltyDAO().getByUserId(user.getId()) : null;
+        req.setAttribute("memberVoucherEnabled", member);
+        req.setAttribute("loyaltyPoints", loyalty == null ? 0 : loyalty.getPoints());
+        req.setAttribute("loyaltyPointValue", pointValue);
         req.getRequestDispatcher("/WEB-INF/views/checkout.jsp").forward(req, resp);
     }
 
@@ -67,9 +79,23 @@ public class CheckoutServlet extends HttpServlet {
             writeJson(resp, result);
             return;
         }
+        if (!RoleAccessPolicy.canCreateOrderType(user, orderType)) {
+            resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            result.put("success", false);
+            result.put("message", "Tài khoản khách hàng chỉ được đặt cọc trước món, không được thanh toán trực tiếp.");
+            writeJson(resp, result);
+            return;
+        }
         if (!"cash".equals(paymentMethod) && !"vnpay".equals(paymentMethod)) {
             result.put("success", false);
             result.put("message", "Phương thức thanh toán không hợp lệ.");
+            writeJson(resp, result);
+            return;
+        }
+        if (!RoleAccessPolicy.canUsePaymentMethod(user, paymentMethod)) {
+            resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            result.put("success", false);
+            result.put("message", "Tài khoản khách hàng chỉ được thanh toán tiền cọc qua VNPay.");
             writeJson(resp, result);
             return;
         }
@@ -90,9 +116,34 @@ public class CheckoutServlet extends HttpServlet {
             }
         }
 
-        double total = cart.stream()
+        double grossTotal = cart.stream()
                 .mapToDouble(item -> item.getDiscountedPrice() * item.getQuantity())
                 .sum();
+        int requestedPoints;
+        try {
+            String rawPoints = req.getParameter("redeemPoints");
+            requestedPoints = rawPoints == null || rawPoints.isBlank()
+                    ? 0 : Integer.parseInt(rawPoints);
+            if (requestedPoints < 0) throw new NumberFormatException();
+        } catch (NumberFormatException exception) {
+            result.put("success", false);
+            result.put("message", "Số điểm muốn dùng không hợp lệ.");
+            writeJson(resp, result);
+            return;
+        }
+        LoyaltyPoint loyalty = new LoyaltyDAO().getByUserId(user.getId());
+        int availablePoints = loyalty == null ? 0 : loyalty.getPoints();
+        int pointValue = SystemSettingsService.getPositiveInt("loyalty_vnd_per_point", 1000);
+        var voucher = LoyaltyVoucherService.quote(user.getRole(), grossTotal, requestedPoints,
+                availablePoints, pointValue);
+        if (requestedPoints != voucher.pointsUsed()) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            result.put("success", false);
+            result.put("message", "Voucher không hợp lệ: chỉ Member được dùng điểm, tối đa 80% đơn và không vượt số dư.");
+            writeJson(resp, result);
+            return;
+        }
+        double total = voucher.netTotal();
         double depositRate = SystemSettingsService.getPositiveInt("deposit_percent", 30) / 100.0;
         double payableAmount = "deposit".equals(orderType)
                 ? Math.round(total * depositRate)
@@ -108,7 +159,8 @@ public class CheckoutServlet extends HttpServlet {
             }
             try {
                 Payment payment = paymentDAO.createPendingVNPayOrder(
-                        user.getId(), cart, total, orderType, pickupDate, payableAmount);
+                        user.getId(), cart, total, grossTotal, orderType, pickupDate,
+                        payableAmount, voucher.pointsUsed(), voucher.discountAmount());
                 session.removeAttribute("cart");
                 result.put("success", true);
                 result.put("redirectUrl", req.getContextPath()

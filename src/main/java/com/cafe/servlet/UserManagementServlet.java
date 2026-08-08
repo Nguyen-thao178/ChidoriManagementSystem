@@ -18,8 +18,7 @@ import java.util.Set;
 
 @WebServlet("/admin/users")
 public class UserManagementServlet extends HttpServlet {
-    private static final Set<String> ALLOWED_ROLES =
-            Set.of("admin", "manager", "staff", "customer");
+    private static final Set<String> MANAGER_ASSIGNABLE_ROLES = Set.of("staff");
     private final UserDAO userDAO = new UserDAO();
 
     @Override
@@ -59,7 +58,9 @@ public class UserManagementServlet extends HttpServlet {
                         .forward(request, response);
                 return;
             }
-            List<User> users = userDAO.findAll();
+            List<User> users = userDAO.findAll().stream()
+                    .filter(user -> "staff".equalsIgnoreCase(user.getRole()))
+                    .toList();
             request.setAttribute("users", users);
             request.getRequestDispatcher("/WEB-INF/views/admin/user_list.jsp")
                     .forward(request, response);
@@ -146,8 +147,7 @@ public class UserManagementServlet extends HttpServlet {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
-            if (!canManageTarget(actor, existing)
-                    || (actor.getId() == id && !"admin".equalsIgnoreCase(role))) {
+            if (!canManageTarget(actor, existing)) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN,
                         "Không thể thay đổi tài khoản ngang cấp hoặc cấp trên.");
                 return;
@@ -210,28 +210,21 @@ public class UserManagementServlet extends HttpServlet {
     }
 
     private boolean canManageUsers(User user) {
-        return user != null && ("admin".equalsIgnoreCase(user.getRole())
-                || "manager".equalsIgnoreCase(user.getRole()));
+        return user != null && "manager".equalsIgnoreCase(user.getRole());
     }
 
     private Set<String> allowedRolesFor(User actor) {
-        if (actor != null && "admin".equalsIgnoreCase(actor.getRole())) {
-            return ALLOWED_ROLES;
-        }
-        return Set.of("staff", "customer");
+        return MANAGER_ASSIGNABLE_ROLES;
     }
 
     private boolean canManageTarget(User actor, User target) {
         if (actor == null || target == null) return false;
-        if ("admin".equalsIgnoreCase(actor.getRole())) return true;
         return "manager".equalsIgnoreCase(actor.getRole())
-                && ("staff".equalsIgnoreCase(target.getRole())
-                || "customer".equalsIgnoreCase(target.getRole()));
+                && "staff".equalsIgnoreCase(target.getRole());
     }
 
     private void prepareRoleContext(HttpServletRequest request, User actor) {
-        request.setAttribute("managerLimited",
-                actor != null && "manager".equalsIgnoreCase(actor.getRole()));
+        request.setAttribute("managerLimited", true);
     }
 
     private Integer parsePositiveInt(String value) {

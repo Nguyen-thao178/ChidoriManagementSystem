@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thanh toán - Chidori Coffee</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260803-role-permissions1">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css?v=20260809-loyalty1">
 </head>
 <body>
 <%@ include file="header.jsp" %>
@@ -80,19 +80,37 @@
                 <section class="checkout-options">
                     <form id="checkoutForm">
                         <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                        <c:if test="${memberVoucherEnabled}">
+                            <section class="checkout-voucher-card">
+                                <div class="voucher-heading">
+                                    <span>🎟️</span>
+                                    <div><strong>Dùng điểm thành viên</strong>
+                                        <small>Bạn có <b>${loyaltyPoints} điểm</b> · giảm tối đa 80% đơn</small></div>
+                                </div>
+                                <div class="voucher-control">
+                                    <input id="redeemPoints" name="redeemPoints" type="number"
+                                           value="0" min="0" max="${loyaltyPoints}" step="1">
+                                    <button id="useMaximumPoints" type="button">Dùng tối đa</button>
+                                </div>
+                                <p id="voucherPreview">Chưa áp dụng voucher.</p>
+                            </section>
+                        </c:if>
                         <fieldset>
                             <legend><span>02</span> Hình thức giao dịch</legend>
+                            <c:if test="${not customerDepositOnly}">
+                                <label class="choice-card">
+                                    <input type="radio" name="orderType" value="direct" checked>
+                                    <i class="choice-icon">⚡</i>
+                                    <span>
+                                        <strong>Thanh toán liền</strong>
+                                        <small>Thanh toán toàn bộ và nhận hàng ngay.</small>
+                                    </span>
+                                    <b class="choice-check">✓</b>
+                                </label>
+                            </c:if>
                             <label class="choice-card">
-                                <input type="radio" name="orderType" value="direct" checked>
-                                <i class="choice-icon">⚡</i>
-                                <span>
-                                    <strong>Thanh toán liền</strong>
-                                    <small>Thanh toán toàn bộ và nhận hàng ngay.</small>
-                                </span>
-                                <b class="choice-check">✓</b>
-                            </label>
-                            <label class="choice-card">
-                                <input type="radio" name="orderType" value="deposit">
+                                <input type="radio" name="orderType" value="deposit"
+                                       <c:if test="${customerDepositOnly}">checked</c:if>>
                                 <i class="choice-icon">◷</i>
                                 <span>
                                     <strong>Đặt cọc</strong>
@@ -102,11 +120,13 @@
                             </label>
                         </fieldset>
 
-                        <div id="pickupDateGroup" class="conditional-field" hidden>
+                        <div id="pickupDateGroup" class="conditional-field"
+                             <c:if test="${not customerDepositOnly}">hidden</c:if>>
                             <label for="pickupDate"><strong>📅 Ngày dự kiến nhận hàng</strong></label>
-                            <input type="date" id="pickupDate" name="pickupDate" min="${minPickupDate}">
+                            <input type="date" id="pickupDate" name="pickupDate" min="${minPickupDate}"
+                                   <c:if test="${customerDepositOnly}">required</c:if>>
                             <p><span>Tiền cọc (${depositPercent}%)</span>
-                                <strong class="deposit-highlight">
+                                <strong id="depositAmount" class="deposit-highlight">
                                     <fmt:formatNumber value="${total * depositPercent / 100}" type="number"/>${appSettings.currency_symbol}
                                 </strong>
                             </p>
@@ -115,22 +135,25 @@
 
                         <fieldset>
                             <legend><span>03</span> Phương thức thanh toán</legend>
+                            <c:if test="${not customerDepositOnly}">
+                                <label class="choice-card">
+                                    <input type="radio" name="paymentMethod" value="cash" checked>
+                                    <i class="choice-icon">₫</i>
+                                    <span>
+                                        <strong>Tiền mặt</strong>
+                                        <small>Thu tiền trực tiếp tại quầy.</small>
+                                    </span>
+                                    <b class="choice-check">✓</b>
+                                </label>
+                            </c:if>
                             <label class="choice-card">
-                                <input type="radio" name="paymentMethod" value="cash" checked>
-                                <i class="choice-icon">₫</i>
-                                <span>
-                                    <strong>Tiền mặt</strong>
-                                    <small>Thu tiền trực tiếp tại quầy.</small>
-                                </span>
-                                <b class="choice-check">✓</b>
-                            </label>
-                            <label class="choice-card">
-                                <input type="radio" name="paymentMethod" value="vnpay">
+                                <input type="radio" name="paymentMethod" value="vnpay"
+                                       <c:if test="${customerDepositOnly}">checked</c:if>>
                                 <i class="choice-icon vnpay-icon">V</i>
                                 <span>
                                     <strong>VNPay</strong>
                                     <small>
-                                        Thanh toán toàn bộ hoặc tiền cọc qua VNPay
+                                        ${customerDepositOnly ? 'Phương thức thanh toán duy nhất cho tài khoản Customer' : 'Thanh toán toàn bộ hoặc tiền cọc'} qua VNPay
                                         <c:if test="${vnpaySandbox}"> sandbox.</c:if>
                                     </small>
                                 </span>
@@ -180,25 +203,54 @@
         const sandboxNote = document.getElementById('vnpaySandboxNote');
         const money = new Intl.NumberFormat('vi-VN');
         const currencySymbol = '${appSettings.currency_symbol}';
+        const redeemInput = document.getElementById('redeemPoints');
+        const maximumButton = document.getElementById('useMaximumPoints');
+        const voucherPreview = document.getElementById('voucherPreview');
+        const pointValue = Number('${loyaltyPointValue}');
+        const availablePoints = Number('${loyaltyPoints}');
+        const maximumPoints = Math.max(0, Math.min(availablePoints,
+            Math.floor(total * 0.8 / Math.max(1, pointValue))));
+
+        function voucher() {
+            if (!redeemInput) return {points: 0, discount: 0, net: total};
+            const points = Math.max(0, Math.min(maximumPoints,
+                Number.parseInt(redeemInput.value || '0', 10) || 0));
+            redeemInput.value = points;
+            const discount = points * pointValue;
+            if (voucherPreview) voucherPreview.innerHTML = points > 0
+                ? 'Đã dùng <b>' + points + ' điểm</b>, giảm <b>' + money.format(discount) + currencySymbol + '</b>.'
+                : 'Chưa áp dụng voucher.';
+            return {points, discount, net: total - discount};
+        }
 
         function refreshOptions() {
             const orderType = form.elements.orderType.value;
             const paymentMethod = form.elements.paymentMethod.value;
             const isDeposit = orderType === 'deposit';
-            const amount = isDeposit ? Math.round(total * depositRate) : total;
+            const applied = voucher();
+            const amount = isDeposit ? Math.round(applied.net * depositRate) : applied.net;
 
             pickupGroup.hidden = !isDeposit;
             pickupInput.required = isDeposit;
             if (sandboxNote) sandboxNote.hidden = paymentMethod !== 'vnpay';
             summary.innerHTML =
                 '<strong>Số tiền cần thanh toán: ' + money.format(amount) + currencySymbol + '</strong>' +
+                (applied.discount > 0 ? '<small>Giá gốc ' + money.format(total) + currencySymbol +
+                    ' · Voucher -' + money.format(applied.discount) + currencySymbol + '</small>' : '') +
                 '<small>' + (isDeposit ? 'Tiền cọc giữ hàng' : 'Toàn bộ giá trị đơn') +
                 ' · ' + (paymentMethod === 'cash' ? 'Tiền mặt' : 'VNPay') + '</small>';
+            const depositAmount = document.getElementById('depositAmount');
+            if (depositAmount) depositAmount.textContent = money.format(Math.round(applied.net * depositRate)) + currencySymbol;
             submitButton.querySelector('span').textContent =
                 isDeposit ? 'Xác nhận đặt cọc' : 'Xác nhận thanh toán';
         }
 
         form.addEventListener('change', refreshOptions);
+        if (redeemInput) redeemInput.addEventListener('input', refreshOptions);
+        if (maximumButton) maximumButton.addEventListener('click', () => {
+            redeemInput.value = maximumPoints;
+            refreshOptions();
+        });
         refreshOptions();
 
         form.addEventListener('submit', async event => {

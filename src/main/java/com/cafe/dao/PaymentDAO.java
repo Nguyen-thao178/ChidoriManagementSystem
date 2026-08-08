@@ -22,6 +22,14 @@ public class PaymentDAO {
     public Payment createPendingVNPayOrder(int userId, List<CartItem> cart, double total,
                                            String orderType, Date pickupDate, double payable)
             throws SQLException {
+        return createPendingVNPayOrder(userId, cart, total, total, orderType, pickupDate,
+                payable, 0, 0);
+    }
+
+    public Payment createPendingVNPayOrder(int userId, List<CartItem> cart, double total,
+                                           double grossAmount, String orderType, Date pickupDate,
+                                           double payable, int loyaltyPointsUsed,
+                                           double loyaltyDiscountAmount) throws SQLException {
         try (Connection connection = DBConnection.getConnection()) {
             connection.setAutoCommit(false);
             try {
@@ -30,13 +38,15 @@ public class PaymentDAO {
                 if (deposit && pickupDate == null) {
                     throw new SQLException("Đơn cọc phải có ngày nhận hàng.");
                 }
+                LoyaltyDAO.redeemPoints(connection, userId, loyaltyPointsUsed);
 
                 int orderId;
                 String orderSql = """
                         INSERT INTO orders
                             (user_id, total_amount, status, order_type, payment_method,
-                             deposit_amount, pickup_date, pickup_status)
-                        VALUES (?, ?, 'pending', ?, 'vnpay', ?, ?, ?)
+                             deposit_amount, pickup_date, pickup_status, gross_amount,
+                             loyalty_points_used, loyalty_discount_amount)
+                        VALUES (?, ?, 'pending', ?, 'vnpay', ?, ?, ?, ?, ?, ?)
                         """;
                 try (PreparedStatement statement =
                              connection.prepareStatement(orderSql, Statement.RETURN_GENERATED_KEYS)) {
@@ -46,6 +56,9 @@ public class PaymentDAO {
                     statement.setDouble(4, deposit ? payable : 0);
                     statement.setDate(5, pickupDate);
                     statement.setString(6, deposit ? "pending" : null);
+                    statement.setDouble(7, grossAmount);
+                    statement.setInt(8, loyaltyPointsUsed);
+                    statement.setDouble(9, loyaltyDiscountAmount);
                     statement.executeUpdate();
                     try (ResultSet keys = statement.getGeneratedKeys()) {
                         if (!keys.next()) throw new SQLException("Không lấy được order ID.");
@@ -71,7 +84,7 @@ public class PaymentDAO {
         }
     }
 
-    public Payment createBalancePayment(int orderId, int userId, String paymentMethod)
+    public Payment createBalancePaymentForCustomerOrder(int orderId, String paymentMethod)
             throws SQLException {
         if (!"cash".equals(paymentMethod) && !"vnpay".equals(paymentMethod)) {
             throw new SQLException("Phương thức thanh toán phần còn lại không hợp lệ.");
@@ -80,20 +93,23 @@ public class PaymentDAO {
             connection.setAutoCommit(false);
             try {
                 double balance;
+                int customerUserId;
                 String lockSql = """
-                        SELECT total_amount - deposit_amount AS balance
-                        FROM orders WITH (UPDLOCK, ROWLOCK)
-                        WHERE id = ? AND user_id = ? AND order_type = 'deposit'
-                          AND status = 'deposit_pending'
+                        SELECT o.total_amount - o.deposit_amount AS balance, o.user_id
+                        FROM orders o WITH (UPDLOCK, ROWLOCK)
+                        INNER JOIN users u ON u.id = o.user_id
+                        WHERE o.id = ? AND o.order_type = 'deposit'
+                          AND o.status = 'deposit_pending'
+                          AND LOWER(u.role) IN ('customer', 'member')
                         """;
                 try (PreparedStatement statement = connection.prepareStatement(lockSql)) {
                     statement.setInt(1, orderId);
-                    statement.setInt(2, userId);
                     try (ResultSet result = statement.executeQuery()) {
                         if (!result.next()) {
                             throw new SQLException("Đơn cọc không còn ở trạng thái chờ nhận.");
                         }
                         balance = result.getDouble("balance");
+                        customerUserId = result.getInt("user_id");
                     }
                 }
 
@@ -135,7 +151,7 @@ public class PaymentDAO {
                 if (cash) completePickup(connection, orderId);
                 Payment payment = findPaymentById(connection, paymentId);
                 connection.commit();
-                if (cash) addLoyaltyAfterCommit(userId, payment.getOrderTotal());
+                if (cash) addLoyaltyAfterCommit(customerUserId, payment.getOrderTotal());
                 return payment;
             } catch (Exception exception) {
                 connection.rollback();
@@ -151,6 +167,19 @@ public class PaymentDAO {
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, paymentId);
             statement.setInt(2, userId);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next() ? mapPayment(result) : null;
+            }
+        }
+    }
+
+    public Payment getPendingCustomerBalancePaymentForStaff(long paymentId) throws SQLException {
+        String sql = paymentSelect() + " INNER JOIN users u ON u.id = o.user_id " +
+                "WHERE p.id = ? AND p.payment_stage = 'balance' AND p.status = 'pending' " +
+                "AND o.order_type = 'deposit' AND LOWER(u.role) IN ('customer', 'member')";
+        try (Connection connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, paymentId);
             try (ResultSet result = statement.executeQuery()) {
                 return result.next() ? mapPayment(result) : null;
             }
@@ -248,6 +277,7 @@ public class PaymentDAO {
                         statement.setInt(1, payment.getOrderId());
                         statement.executeUpdate();
                     }
+                    LoyaltyDAO.refundOrderPoints(connection, payment.getOrderId());
                 }
                 connection.commit();
             } catch (Exception exception) {

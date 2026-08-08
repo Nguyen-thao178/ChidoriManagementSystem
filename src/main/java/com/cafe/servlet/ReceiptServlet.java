@@ -4,6 +4,7 @@ import com.cafe.dao.OrderDAO;
 import com.cafe.model.Order;
 import com.cafe.model.ReceiptItem;
 import com.cafe.model.User;
+import com.cafe.security.RoleAccessPolicy;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -36,13 +37,26 @@ public class ReceiptServlet extends HttpServlet {
         }
 
         try {
-            Order order = orderDAO.getOrderByIdAndUserId(orderId, user.getId());
+            boolean manager = "manager".equalsIgnoreCase(user.getRole());
+            boolean staff = RoleAccessPolicy.isStaff(user);
+            Order order;
+            if (manager) {
+                order = orderDAO.getOrderById(orderId);
+            } else {
+                order = orderDAO.getOrderByIdAndUserId(orderId, user.getId());
+                if (order == null && staff) {
+                    order = orderDAO.getCustomerDepositOrderById(orderId);
+                }
+            }
             if (order == null) {
                 resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy hóa đơn.");
                 return;
             }
 
-            List<ReceiptItem> items = orderDAO.getReceiptItems(orderId, user.getId());
+            boolean viewingCustomerOrder = staff && order.getUserId() != user.getId();
+            List<ReceiptItem> items = (manager || viewingCustomerOrder)
+                    ? orderDAO.getReceiptItems(orderId)
+                    : orderDAO.getReceiptItems(orderId, user.getId());
             String paymentStage = "balance".equals(req.getParameter("stage"))
                     ? "balance"
                     : ("deposit".equals(order.getOrderType()) ? "deposit" : "full");

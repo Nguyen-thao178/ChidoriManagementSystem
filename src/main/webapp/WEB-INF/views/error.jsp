@@ -12,7 +12,7 @@
 <div class="form-container">
     <h2>⚠️ Đã xảy ra lỗi</h2>
     <p>Rất tiếc, hệ thống gặp sự cố. Vui lòng quay lại sau.</p>
-    <p><a href="${pageContext.request.contextPath}/home" class="btn">Về trang chủ</a></p>
+    <p><a href="${homePath}" class="btn">Về trang chính</a></p>
 </div>
 <%@ include file="footer.jsp" %>
 </body>

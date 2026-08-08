@@ -125,6 +125,10 @@ CREATE TABLE dbo.orders (
     completed_at DATETIME2 NULL,
     cancelled_at DATETIME2 NULL,
     cancellation_reason NVARCHAR(300) NULL,
+    gross_amount DECIMAL(18,2) NOT NULL,
+    loyalty_points_used INT NOT NULL CONSTRAINT DF_orders_loyalty_points_used DEFAULT 0,
+    loyalty_discount_amount DECIMAL(18,2) NOT NULL CONSTRAINT DF_orders_loyalty_discount DEFAULT 0,
+    loyalty_points_refunded BIT NOT NULL CONSTRAINT DF_orders_loyalty_refunded DEFAULT 0,
     CONSTRAINT FK_orders_user FOREIGN KEY (user_id) REFERENCES dbo.users(id),
     CONSTRAINT CK_orders_total CHECK (total_amount >= 0),
     CONSTRAINT CK_orders_status CHECK (
@@ -133,6 +137,11 @@ CREATE TABLE dbo.orders (
     CONSTRAINT CK_orders_type CHECK (order_type IN ('direct', 'deposit')),
     CONSTRAINT CK_orders_payment_method CHECK (payment_method IN ('cash', 'vnpay')),
     CONSTRAINT CK_orders_deposit_amount CHECK (deposit_amount >= 0 AND deposit_amount <= total_amount),
+    CONSTRAINT CK_orders_loyalty_voucher CHECK (
+        gross_amount >= total_amount AND loyalty_points_used >= 0
+        AND loyalty_discount_amount = gross_amount - total_amount
+        AND loyalty_discount_amount <= gross_amount * 0.8
+    ),
     CONSTRAINT CK_orders_pickup_status CHECK (
         pickup_status IS NULL OR pickup_status IN ('pending', 'picked_up', 'no_show')
     ),
@@ -204,6 +213,22 @@ CREATE TABLE dbo.loyalty_points (
         FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE CASCADE,
     CONSTRAINT CK_loyalty_points_points CHECK (points >= 0),
     CONSTRAINT CK_loyalty_points_spent CHECK (total_spent >= 0)
+);
+
+CREATE TABLE dbo.member_profiles (
+    id              INT IDENTITY(1,1) PRIMARY KEY,
+    user_id         INT NOT NULL,
+    membership_code VARCHAR(20) NOT NULL,
+    phone           VARCHAR(20) NOT NULL,
+    birth_date      DATE NULL,
+    address         NVARCHAR(500) NOT NULL,
+    joined_at       DATETIME2 NOT NULL CONSTRAINT DF_member_profiles_joined DEFAULT SYSDATETIME(),
+    status          VARCHAR(20) NOT NULL CONSTRAINT DF_member_profiles_status DEFAULT 'active',
+    CONSTRAINT UX_member_profiles_user UNIQUE (user_id),
+    CONSTRAINT UX_member_profiles_code UNIQUE (membership_code),
+    CONSTRAINT FK_member_profiles_user FOREIGN KEY (user_id)
+        REFERENCES dbo.users(id) ON DELETE CASCADE,
+    CONSTRAINT CK_member_profiles_status CHECK (status IN ('active', 'inactive'))
 );
 
 CREATE TABLE dbo.contacts (
@@ -368,14 +393,21 @@ BEGIN
     SET XACT_ABORT ON;
     BEGIN TRANSACTION;
 
-    DECLARE @expired_orders TABLE (order_id INT PRIMARY KEY);
+    DECLARE @expired_orders TABLE (
+        order_id INT PRIMARY KEY,
+        user_id INT NOT NULL,
+        points_used INT NOT NULL
+    );
 
     UPDATE dbo.orders WITH (UPDLOCK, READPAST, ROWLOCK)
     SET status = 'no_show',
         pickup_status = 'no_show',
         cancelled_at = SYSDATETIME(),
-        cancellation_reason = N'Không nhận hàng'
-    OUTPUT inserted.id INTO @expired_orders(order_id)
+        cancellation_reason = N'Không nhận hàng',
+        loyalty_points_refunded = CASE WHEN loyalty_points_used > 0 THEN 1 ELSE loyalty_points_refunded END
+    OUTPUT inserted.id, inserted.user_id,
+           CASE WHEN deleted.loyalty_points_refunded = 0 THEN inserted.loyalty_points_used ELSE 0 END
+    INTO @expired_orders(order_id, user_id, points_used)
     WHERE order_type = 'deposit'
       AND status = 'deposit_pending'
       AND pickup_date < CAST(GETDATE() AS DATE);
@@ -389,6 +421,16 @@ BEGIN
         INNER JOIN @expired_orders eo ON eo.order_id = oi.order_id
         GROUP BY oi.product_id
     ) expired ON expired.product_id = p.id;
+
+    UPDATE lp
+    SET points = lp.points + refunds.points_used, updated_at = SYSDATETIME()
+    FROM dbo.loyalty_points lp
+    INNER JOIN (
+        SELECT user_id, SUM(points_used) points_used
+        FROM @expired_orders
+        GROUP BY user_id
+    ) refunds ON refunds.user_id = lp.user_id
+    WHERE refunds.points_used > 0;
 
     DECLARE @expired_count INT = (SELECT COUNT(*) FROM @expired_orders);
     COMMIT TRANSACTION;
@@ -647,6 +689,18 @@ AS
     FROM dbo.orders o
     INNER JOIN dbo.users u ON u.id = o.user_id
     WHERE o.order_type = 'deposit';
+GO
+
+CREATE OR ALTER VIEW dbo.vw_member_loyalty
+AS
+    SELECT u.id user_id, u.username, u.fullname, u.email,
+           mp.membership_code, mp.phone, mp.birth_date, mp.address,
+           mp.joined_at, mp.status, COALESCE(lp.points, 0) points,
+           COALESCE(lp.total_spent, 0) total_spent
+    FROM dbo.users u
+    INNER JOIN dbo.member_profiles mp ON mp.user_id = u.id
+    LEFT JOIN dbo.loyalty_points lp ON lp.user_id = u.id
+    WHERE LOWER(u.role) = 'member';
 GO
 
 INSERT INTO dbo.users (username, password_hash, fullname, email, role)

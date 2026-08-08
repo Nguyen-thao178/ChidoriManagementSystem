@@ -156,7 +156,8 @@ document.addEventListener('DOMContentLoaded', function() {
         meta.className = 'message-meta';
         meta.textContent = isUser
             ? 'Bạn · ' + currentTimeLabel()
-            : (provider === 'gemini' ? 'Gemini · ' : 'Chidori · ') + currentTimeLabel();
+            : (provider === 'gemini' ? 'Gemini · '
+                : (provider === 'cart' ? 'Giỏ hàng · ' : 'Chidori · ')) + currentTimeLabel();
         messageContent.appendChild(meta);
         msgDiv.appendChild(messageContent);
         chatBody.appendChild(msgDiv);
@@ -176,6 +177,75 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sending && chatBody) chatBody.scrollTop = chatBody.scrollHeight;
     }
 
+    function animateChatCartAddition(cartAction) {
+        if (!cartAction || !cartAction.added) return;
+
+        var cartLink = document.getElementById('headerCartLink');
+        var cartCount = document.getElementById('headerCartCount');
+        if (cartCount) {
+            cartCount.textContent = String(cartAction.cartQuantity || 0);
+            cartCount.classList.toggle('is-empty', !cartAction.cartQuantity);
+        }
+
+        var source = document.getElementById('sendChat') || chatWindow;
+        var target = cartLink || chatIcon;
+        if (!source || !target || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            if (cartLink) {
+                cartLink.classList.add('cart-received');
+                window.setTimeout(function() { cartLink.classList.remove('cart-received'); }, 650);
+            }
+            return;
+        }
+
+        var sourceRect = source.getBoundingClientRect();
+        var targetRect = target.getBoundingClientRect();
+        var flyer = document.createElement('div');
+        flyer.className = 'chat-cart-flyer';
+        flyer.setAttribute('aria-hidden', 'true');
+
+        if (cartAction.productImage) {
+            var image = document.createElement('img');
+            image.alt = '';
+            image.src = cartAction.productImage.startsWith(contextPath + '/')
+                ? cartAction.productImage
+                : (cartAction.productImage.startsWith('/')
+                    ? contextPath + cartAction.productImage
+                    : cartAction.productImage);
+            image.addEventListener('error', function() {
+                image.remove();
+                flyer.textContent = '☕';
+            }, {once: true});
+            flyer.appendChild(image);
+        } else {
+            flyer.textContent = '☕';
+        }
+        document.body.appendChild(flyer);
+
+        var startX = sourceRect.left + sourceRect.width / 2 - 24;
+        var startY = sourceRect.top + sourceRect.height / 2 - 24;
+        var endX = targetRect.left + targetRect.width / 2 - 24;
+        var endY = targetRect.top + targetRect.height / 2 - 24;
+        flyer.style.left = startX + 'px';
+        flyer.style.top = startY + 'px';
+
+        var animation = flyer.animate([
+            {transform: 'translate3d(0,0,0) scale(.72)', opacity: 0},
+            {transform: 'translate3d(0,-30px,0) scale(1.08)', opacity: 1, offset: .2},
+            {transform: 'translate3d(' + ((endX - startX) * .58) + 'px,'
+                    + ((endY - startY) * .45 - 55) + 'px,0) scale(.9)', opacity: 1, offset: .62},
+            {transform: 'translate3d(' + (endX - startX) + 'px,'
+                    + (endY - startY) + 'px,0) scale(.28)', opacity: .15}
+        ], {duration: 920, easing: 'cubic-bezier(.2,.72,.24,1)', fill: 'forwards'});
+
+        animation.finished.finally(function() {
+            flyer.remove();
+            if (cartLink) {
+                cartLink.classList.add('cart-received');
+                window.setTimeout(function() { cartLink.classList.remove('cart-received'); }, 650);
+            }
+        });
+    }
+
     function sendToAI(message) {
         setSending(true);
         fetch(contextPath + '/chat', {
@@ -193,10 +263,13 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(function(data) {
             addMessage(data.message || 'Mình chưa thể trả lời lúc này.', false, data.provider);
+            animateChatCartAddition(data.cartAction);
             if (chatProviderStatus) {
                 chatProviderStatus.innerHTML = data.provider === 'gemini'
                     ? '<i></i> Gemini đang hoạt động'
-                    : '<i></i> Chế độ hỗ trợ nội bộ';
+                    : (data.provider === 'cart'
+                        ? '<i></i> Đã cập nhật giỏ hàng'
+                        : '<i></i> Chidori đang hoạt động');
             }
         })
         .catch(function() {
